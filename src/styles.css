@@ -1,0 +1,773 @@
+/* ═══════════════════════════════════════════════════════
+   GPM Styles — Scoped inside Shadow DOM
+   Material 3 / Gemini aesthetic. Dark + Light mode.
+   ═══════════════════════════════════════════════════════ */
+
+:host {
+  --gpm-bg: #1e1f20;
+  --gpm-bg-elevated: #282a2c;
+  --gpm-bg-hover: #333537;
+  --gpm-text: #e3e3e3;
+  --gpm-text-secondary: #9aa0a6;
+  --gpm-border: #3c4043;
+  --gpm-accent: #8ab4f8;
+  --gpm-accent-hover: #aecbfa;
+  --gpm-danger: #f28b82;
+  --gpm-radius: 12px;
+  --gpm-radius-sm: 8px;
+  --gpm-font: 'Google Sans', 'Segoe UI', system-ui, sans-serif;
+  --gpm-transition: 150ms cubic-bezier(0.2, 0, 0, 1);
+
+  display: block !important;
+  width: 100% !important;
+  min-width: 0;
+  position: relative;
+  font-family: var(--gpm-font);
+  font-size: 13px;
+  color: var(--gpm-text);
+  line-height: 1.4;
+}
+
+:host(.gpm-light) {
+  --gpm-bg: #f8f9fa;
+  --gpm-bg-elevated: #ffffff;
+  --gpm-bg-hover: #e8eaed;
+  --gpm-text: #1f1f1f;
+  --gpm-text-secondary: #5f6368;
+  --gpm-border: #dadce0;
+  --gpm-accent: #1a73e8;
+  --gpm-accent-hover: #1967d2;
+  --gpm-danger: #d93025;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── Container ── */
+.gpm-root {
+  width: 100%;
+  padding: 12px 0;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--gpm-border);
+}
+
+.gpm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 12px 10px;
+  user-select: none;
+  gap: 8px;
+}
+
+.gpm-header-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--gpm-text-secondary);
+  flex-shrink: 0;
+}
+
+.gpm-header-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* ── Icon Buttons ── */
+.gpm-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--gpm-text-secondary);
+  cursor: pointer;
+  transition: background var(--gpm-transition), color var(--gpm-transition);
+  font-size: 15px;
+  line-height: 1;
+  padding: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.gpm-icon-btn:hover {
+  background: var(--gpm-bg-hover);
+  color: var(--gpm-text);
+}
+
+.gpm-icon-btn:active {
+  transform: scale(0.92);
+}
+
+/* ── Project Tree ── */
+.gpm-tree {
+  list-style: none;
+  padding: 0 8px;
+}
+
+.gpm-tree-item {
+  border-radius: var(--gpm-radius-sm);
+  margin-bottom: 1px;
+}
+
+.gpm-tree-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: var(--gpm-radius-sm);
+  cursor: pointer;
+  transition: background var(--gpm-transition);
+  user-select: none;
+  position: relative;
+}
+
+.gpm-tree-row:hover {
+  background: var(--gpm-bg-hover);
+}
+
+.gpm-tree-row.gpm-active {
+  background: var(--gpm-bg-hover);
+}
+
+.gpm-tree-chevron {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: var(--gpm-text-secondary);
+  transition: transform var(--gpm-transition);
+  flex-shrink: 0;
+}
+
+.gpm-tree-chevron.gpm-expanded {
+  transform: rotate(90deg);
+}
+
+.gpm-tree-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+  width: 20px;
+  text-align: center;
+}
+
+.gpm-tree-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.gpm-tree-count {
+  font-size: 11px;
+  color: var(--gpm-text-secondary);
+  flex-shrink: 0;
+}
+
+.gpm-tree-children {
+  list-style: none;
+  padding-left: 20px;
+}
+
+/* ── Chat Items inside Projects ── */
+.gpm-chat-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px 5px 12px;
+  border-radius: var(--gpm-radius-sm);
+  cursor: pointer;
+  transition: background var(--gpm-transition);
+  font-size: 12px;
+  color: var(--gpm-text-secondary);
+}
+
+.gpm-chat-item:hover {
+  background: var(--gpm-bg-hover);
+  color: var(--gpm-text);
+}
+
+.gpm-chat-item.gpm-pinned::before {
+  content: '📌';
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.gpm-chat-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.gpm-chat-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Drag & Drop ── */
+.gpm-tree-row.gpm-drag-over {
+  outline: 2px solid var(--gpm-accent);
+  outline-offset: -2px;
+  background: color-mix(in srgb, var(--gpm-accent) 10%, transparent);
+}
+
+.gpm-dragging {
+  opacity: 0.5;
+}
+
+/* ── Modal / Overlay ── */
+.gpm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: gpm-fade-in 150ms ease;
+  pointer-events: auto;
+}
+
+@keyframes gpm-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.gpm-modal {
+  background: var(--gpm-bg-elevated);
+  border: 1px solid var(--gpm-border);
+  border-radius: var(--gpm-radius);
+  padding: 24px;
+  width: 360px;
+  max-width: 90vw;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  animation: gpm-scale-in 200ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+@keyframes gpm-scale-in {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.gpm-modal-title {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 16px;
+  color: var(--gpm-text);
+}
+
+/* ── Form Elements ── */
+.gpm-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--gpm-border);
+  border-radius: var(--gpm-radius-sm);
+  background: var(--gpm-bg);
+  color: var(--gpm-text);
+  font-family: var(--gpm-font);
+  font-size: 13px;
+  outline: none;
+  transition: border-color var(--gpm-transition);
+}
+
+.gpm-input:focus {
+  border-color: var(--gpm-accent);
+}
+
+.gpm-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--gpm-border);
+  border-radius: var(--gpm-radius-sm);
+  background: var(--gpm-bg);
+  color: var(--gpm-text);
+  font-family: var(--gpm-font);
+  font-size: 13px;
+  outline: none;
+  resize: vertical;
+  min-height: 80px;
+  transition: border-color var(--gpm-transition);
+}
+
+.gpm-textarea:focus {
+  border-color: var(--gpm-accent);
+}
+
+.gpm-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--gpm-text-secondary);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.gpm-field {
+  margin-bottom: 16px;
+}
+
+/* ── Buttons ── */
+.gpm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 20px;
+  border: none;
+  border-radius: 20px;
+  font-family: var(--gpm-font);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--gpm-transition), color var(--gpm-transition);
+}
+
+.gpm-btn-primary {
+  background: var(--gpm-accent);
+  color: #1e1f20;
+}
+
+.gpm-btn-primary:hover {
+  background: var(--gpm-accent-hover);
+}
+
+.gpm-btn-ghost {
+  background: transparent;
+  color: var(--gpm-text-secondary);
+}
+
+.gpm-btn-ghost:hover {
+  background: var(--gpm-bg-hover);
+  color: var(--gpm-text);
+}
+
+.gpm-btn-danger {
+  background: transparent;
+  color: var(--gpm-danger);
+}
+
+.gpm-btn-danger:hover {
+  background: color-mix(in srgb, var(--gpm-danger) 12%, transparent);
+}
+
+.gpm-btn-row {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+/* ── Color Swatches ── */
+.gpm-color-grid {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.gpm-color-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color var(--gpm-transition), transform var(--gpm-transition);
+}
+
+.gpm-color-swatch:hover {
+  transform: scale(1.15);
+}
+
+.gpm-color-swatch.gpm-selected {
+  border-color: var(--gpm-text);
+  transform: scale(1.15);
+}
+
+/* ── Emoji Picker ── */
+.gpm-emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+  max-height: 160px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.gpm-emoji-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  font-size: 18px;
+  cursor: pointer;
+  transition: background var(--gpm-transition);
+}
+
+.gpm-emoji-btn:hover {
+  background: var(--gpm-bg-hover);
+}
+
+.gpm-emoji-btn.gpm-selected {
+  background: var(--gpm-bg-hover);
+  outline: 2px solid var(--gpm-accent);
+}
+
+/* ── Context Menu ── */
+.gpm-context-menu {
+  position: fixed;
+  background: var(--gpm-bg-elevated);
+  border: 1px solid var(--gpm-border);
+  border-radius: var(--gpm-radius-sm);
+  padding: 4px;
+  min-width: 200px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  z-index: 10001;
+  animation: gpm-scale-in 100ms ease;
+  pointer-events: auto;
+}
+
+.gpm-context-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--gpm-text);
+  font-family: var(--gpm-font);
+  font-size: 13px;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: background var(--gpm-transition);
+}
+
+.gpm-context-item:hover {
+  background: var(--gpm-bg-hover);
+}
+
+.gpm-context-item.gpm-danger {
+  color: var(--gpm-danger);
+}
+
+.gpm-context-icon {
+  width: 18px;
+  text-align: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.gpm-context-divider {
+  height: 1px;
+  background: var(--gpm-border);
+  margin: 4px 8px;
+}
+
+/* ── Submenu (Move to Project) ── */
+.gpm-context-submenu {
+  position: relative;
+}
+
+.gpm-context-submenu-list {
+  position: absolute;
+  left: 100%;
+  top: 0;
+  background: var(--gpm-bg-elevated);
+  border: 1px solid var(--gpm-border);
+  border-radius: var(--gpm-radius-sm);
+  padding: 4px;
+  min-width: 180px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  z-index: 10002;
+}
+
+/* ── Quick Prompts Panel ── */
+.gpm-quick-prompts {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 420px;
+  max-width: 90vw;
+  background: var(--gpm-bg-elevated);
+  border: 1px solid var(--gpm-border);
+  border-radius: var(--gpm-radius);
+  max-height: 440px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.25);
+  animation: gpm-slide-up 200ms ease;
+  pointer-events: auto;
+  z-index: 10000;
+  overflow: hidden;
+}
+
+@keyframes gpm-slide-up {
+  from { transform: translateX(-50%) translateY(8px); opacity: 0; }
+  to { transform: translateX(-50%) translateY(0); opacity: 1; }
+}
+
+.gpm-qp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  flex-shrink: 0;
+}
+
+.gpm-qp-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--gpm-text);
+}
+
+/* ── Search ── */
+.gpm-qp-search-wrap {
+  padding: 0 12px 10px;
+  flex-shrink: 0;
+}
+
+.gpm-qp-search {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--gpm-border);
+  border-radius: 20px;
+  background: var(--gpm-bg);
+  color: var(--gpm-text);
+  font-family: var(--gpm-font);
+  font-size: 13px;
+  outline: none;
+  transition: border-color var(--gpm-transition);
+}
+
+.gpm-qp-search:focus {
+  border-color: var(--gpm-accent);
+}
+
+/* ── Prompt List ── */
+.gpm-qp-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 4px;
+}
+
+/* ── Prompt Card ── */
+.gpm-qp-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin: 0 4px 2px;
+  border-radius: var(--gpm-radius-sm);
+  cursor: pointer;
+  transition: background var(--gpm-transition);
+}
+
+.gpm-qp-card:hover {
+  background: var(--gpm-bg-hover);
+}
+
+.gpm-qp-card-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.gpm-qp-card-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--gpm-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gpm-qp-card-preview {
+  font-size: 11px;
+  color: var(--gpm-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.4;
+  margin-top: 2px;
+}
+
+.gpm-qp-card-edit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--gpm-text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity var(--gpm-transition), background var(--gpm-transition);
+}
+
+.gpm-qp-card:hover .gpm-qp-card-edit {
+  opacity: 1;
+}
+
+.gpm-qp-card-edit:hover {
+  background: var(--gpm-bg-hover);
+  color: var(--gpm-text);
+}
+
+/* ── Footer: Backup / Restore / + ── */
+.gpm-qp-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--gpm-border);
+  flex-shrink: 0;
+}
+
+.gpm-qp-footer-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--gpm-text-secondary);
+  cursor: pointer;
+  transition: background var(--gpm-transition), color var(--gpm-transition);
+}
+
+.gpm-qp-footer-btn:hover {
+  background: var(--gpm-bg-hover);
+  color: var(--gpm-text);
+}
+
+.gpm-qp-fab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: var(--gpm-accent);
+  color: #1e1f20;
+  font-size: 20px;
+  font-weight: 300;
+  cursor: pointer;
+  transition: background var(--gpm-transition);
+  margin-left: 4px;
+}
+
+.gpm-qp-fab:hover {
+  background: var(--gpm-accent-hover);
+}
+
+/* ── Settings Panel ── */
+.gpm-settings-section {
+  margin-bottom: 20px;
+}
+
+.gpm-settings-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--gpm-text-secondary);
+  margin-bottom: 10px;
+}
+
+.gpm-settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+}
+
+.gpm-select {
+  padding: 6px 10px;
+  border: 1px solid var(--gpm-border);
+  border-radius: 6px;
+  background: var(--gpm-bg);
+  color: var(--gpm-text);
+  font-family: var(--gpm-font);
+  font-size: 13px;
+  outline: none;
+}
+
+/* ── Quick Prompt Trigger Button ── */
+.gpm-qp-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--gpm-text-secondary);
+  cursor: pointer;
+  transition: background var(--gpm-transition), color var(--gpm-transition);
+  font-size: 20px;
+}
+
+.gpm-qp-trigger:hover {
+  background: var(--gpm-bg-hover);
+  color: var(--gpm-accent);
+}
+
+/* ── Empty State ── */
+.gpm-empty {
+  text-align: center;
+  padding: 16px 12px;
+  color: var(--gpm-text-secondary);
+  font-size: 12px;
+  font-style: italic;
+  opacity: 0.7;
+}
+
+/* ── Scrollbar ── */
+:host ::-webkit-scrollbar {
+  width: 4px;
+}
+
+:host ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+:host ::-webkit-scrollbar-thumb {
+  background: var(--gpm-border);
+  border-radius: 4px;
+}
+
+:host ::-webkit-scrollbar-thumb:hover {
+  background: var(--gpm-text-secondary);
+}

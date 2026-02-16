@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Generate GPM Icons - Gemini Project Manager Pro</title>
+  <style>
+    body { 
+      font-family: 'Google Sans', sans-serif; 
+      padding: 40px; 
+      background: #1e1f20; 
+      color: #e3e3e3;
+    }
+    canvas { 
+      margin: 20px; 
+      border: 1px solid #3c4043; 
+      border-radius: 8px;
+      background: white;
+    }
+    .info {
+      max-width: 600px;
+      margin-bottom: 30px;
+      line-height: 1.6;
+    }
+    h1 { color: #8ab4f8; }
+  </style>
+</head>
+<body>
+  <h1>Gemini Project Manager Pro - Icons</h1>
+  <div class="info">
+    <p><strong>Instructions:</strong> Right-click each canvas below and select "Save image as..." to download.</p>
+    <p><strong>Design:</strong> Modern gradient folder with organizational grid pattern, representing project management for Gemini AI.</p>
+  </div>
+  
+  <div>
+    <p>16x16 (Extension toolbar icon)</p>
+    <canvas id="c16" width="16" height="16"></canvas>
+  </div>
+  
+  <div>
+    <p>48x48 (Extension management page)</p>
+    <canvas id="c48" width="48" height="48"></canvas>
+  </div>
+  
+  <div>
+    <p>128x128 (Chrome Web Store)</p>
+    <canvas id="c128" width="128" height="128"></canvas>
+  </div>
+
+<script>
+function drawIcon(id, size) {
+  const canvas = document.getElementById(id);
+  const ctx = canvas.getContext('2d');
+  const scale = size / 128; // Base design on 128px
+  
+  // Clear canvas
+  ctx.clearRect(0, 0, size, size);
+  
+  // Create gradient background (Gemini colors: blue to purple)
+  const gradient = ctx.createLinearGradient(0, 0, size, size);
+  gradient.addColorStop(0, '#4285f4');    // Google Blue
+  gradient.addColorStop(0.5, '#8ab4f8');  // Light Blue
+  gradient.addColorStop(1, '#a142f4');    // Purple
+  
+  // Main rounded square background
+  const padding = size * 0.1;
+  const radius = size * 0.15;
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.roundRect(padding, padding, size - padding * 2, size - padding * 2, radius);
+  ctx.fill();
+  
+  // Folder shape (modern, flat design)
+  const folderPadding = size * 0.25;
+  const folderWidth = size * 0.5;
+  const folderHeight = size * 0.4;
+  const folderX = (size - folderWidth) / 2;
+  const folderY = (size - folderHeight) / 2 + size * 0.05;
+  
+  // Folder tab
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+  ctx.beginPath();
+  ctx.roundRect(folderX, folderY - size * 0.08, folderWidth * 0.4, size * 0.08, size * 0.02);
+  ctx.fill();
+  
+  // Folder body
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+  ctx.beginPath();
+  ctx.roundRect(folderX, folderY, folderWidth, folderHeight, size * 0.03);
+  ctx.fill();
+  
+  // Grid pattern inside folder (representing organization)
+  ctx.strokeStyle = gradient;
+  ctx.lineWidth = Math.max(1, size * 0.015);
+  
+  // Vertical lines
+  const gridSpacing = folderWidth / 3;
+  for (let i = 1; i < 3; i++) {
+    ctx.beginPath();
+    ctx.moveTo(folderX + gridSpacing * i, folderY + size * 0.05);
+    ctx.lineTo(folderX + gridSpacing * i, folderY + folderHeight - size * 0.05);
+    ctx.stroke();
+  }
+  
+  // Horizontal lines
+  const gridSpacingH = folderHeight / 3;
+  for (let i = 1; i < 3; i++) {
+    ctx.beginPath();
+    ctx.moveTo(folderX + size * 0.05, folderY + gridSpacingH * i);
+    ctx.lineTo(folderX + folderWidth - size * 0.05, folderY + gridSpacingH * i);
+    ctx.stroke();
+  }
+  
+  // Small accent dot (AI/smart indicator) - top right
+  const dotSize = size * 0.08;
+  ctx.fillStyle = '#34a853'; // Google Green (active/smart indicator)
+  ctx.beginPath();
+  ctx.arc(size - padding - dotSize, padding + dotSize, dotSize, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // White border on dot for contrast
+  ctx.strokeStyle = 'white';
+  ctx.lineWidth = Math.max(1, size * 0.01);
+  ctx.stroke();
+}
+
+// Generate all sizes
+drawIcon('c16', 16);
+drawIcon('c48', 48);
+drawIcon('c128', 128);
+</script>
+</body>
+</html>
