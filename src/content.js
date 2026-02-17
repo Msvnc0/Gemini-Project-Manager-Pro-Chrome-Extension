@@ -601,8 +601,9 @@ async function gpmRenderTree() {
   newRow.addEventListener('click', () => gpmShowCreateProjectModal());
   list.appendChild(newRow);
 
-  // ── Project Rows ──
-  rootProjects.forEach(project => {
+  // ── Project Rows ── (sorted by order field)
+  const sortedRootProjects = [...rootProjects].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  sortedRootProjects.forEach(project => {
     const row = gpmCreateProjectRow(project, projects, chatMap);
     list.appendChild(row);
   });
@@ -645,11 +646,12 @@ function gpmCreateProjectRow(project, allProjects, chatMap) {
 
   row.append(icon, label, count);
 
-  // ── Project Drag (to move project into another project) ──
+  // ── Project Drag (to move project into another project OR reorder) ──
   row.addEventListener('dragstart', (e) => {
     e.stopPropagation();
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/gpm-project-id', project.id);
+    e.dataTransfer.setData('text/gpm-project-parentid', project.parentId || '');
     row.style.opacity = '0.5';
   });
   row.addEventListener('dragend', () => { row.style.opacity = ''; });
@@ -684,26 +686,36 @@ function gpmCreateProjectRow(project, allProjects, chatMap) {
     });
   }
 
-  // Drag & Drop target (accept both chats and projects)
+  // Drag & Drop target (accept chats, projects for nesting OR reordering)
   row.addEventListener('dragover', (e) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    row.classList.add('gpm-drag-over');
+    // Show top/bottom indicator for reordering vs center for nesting
+    const rect = row.getBoundingClientRect();
+    const relY = e.clientY - rect.top;
+    const zone = relY < rect.height * 0.25 ? 'top' : relY > rect.height * 0.75 ? 'bottom' : 'center';
+    row.dataset.dropZone = zone;
+    row.classList.remove('gpm-drag-over', 'gpm-drag-top', 'gpm-drag-bottom');
+    if (zone === 'center') row.classList.add('gpm-drag-over');
+    else if (zone === 'top') row.classList.add('gpm-drag-top');
+    else row.classList.add('gpm-drag-bottom');
   });
   
   row.addEventListener('dragleave', () => {
-    row.classList.remove('gpm-drag-over');
+    row.classList.remove('gpm-drag-over', 'gpm-drag-top', 'gpm-drag-bottom');
+    delete row.dataset.dropZone;
   });
   
   row.addEventListener('drop', async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    row.classList.remove('gpm-drag-over');
+    const zone = row.dataset.dropZone || 'center';
+    row.classList.remove('gpm-drag-over', 'gpm-drag-top', 'gpm-drag-bottom');
+    delete row.dataset.dropZone;
     
     // Check if a PROJECT is being dropped
     const droppedProjectId = e.dataTransfer.getData('text/gpm-project-id');
     if (droppedProjectId && droppedProjectId !== project.id) {
-      // Don't allow dropping a parent into its own child
       const isDescendant = (parentId, childId) => {
         const p = allProjects.find(pr => pr.id === childId);
         if (!p) return false;
@@ -712,35 +724,62 @@ function gpmCreateProjectRow(project, allProjects, chatMap) {
         return false;
       };
       
-      if (!isDescendant(droppedProjectId, project.id)) {
-        console.log('[GPM] Moving project', droppedProjectId, 'into', project.id);
-        const droppedProject = allProjects.find(p => p.id === droppedProjectId);
-        if (droppedProject) {
-          // Remove from old parent's children
-          if (droppedProject.parentId) {
-            const oldParent = allProjects.find(p => p.id === droppedProject.parentId);
-            if (oldParent) {
-              oldParent.children = (oldParent.children || []).filter(c => c !== droppedProjectId);
-              await GPMStorage.updateProject(oldParent.id, { children: oldParent.children });
-            }
-          }
-          // Set new parent
-          droppedProject.parentId = project.id;
-          if (!project.children) project.children = [];
-          if (!project.children.includes(droppedProjectId)) {
-            project.children.push(droppedProjectId);
-          }
-          await GPMStorage.updateProject(droppedProjectId, { parentId: project.id });
-          await GPMStorage.updateProject(project.id, { children: project.children });
-          gpmRenderTree();
-        }
-      } else {
+      if (isDescendant(droppedProjectId, project.id)) {
         console.warn('[GPM] Cannot move project into its own descendant');
+        return;
       }
+
+      const projects = await GPMStorage.getProjects();
+      const droppedProject = projects.find(p => p.id === droppedProjectId);
+      if (!droppedProject) return;
+
+      if (zone === 'center') {
+        // ── NEST: move droppedProject INTO project ──
+        if (droppedProject.parentId) {
+          const oldParent = projects.find(p => p.id === droppedProject.parentId);
+          if (oldParent) oldParent.children = oldParent.children.filter(c => c !== droppedProjectId);
+        }
+        droppedProject.parentId = project.id;
+        if (!project.children) project.children = [];
+        if (!project.children.includes(droppedProjectId)) project.children.push(droppedProjectId);
+        await GPMStorage.saveProjects(projects);
+      } else {
+        // ── REORDER: move droppedProject before/after project (same level) ──
+        const sameParentId = project.parentId || null;
+        
+        // Remove from old parent
+        if (droppedProject.parentId) {
+          const oldParent = projects.find(p => p.id === droppedProject.parentId);
+          if (oldParent) oldParent.children = oldParent.children.filter(c => c !== droppedProjectId);
+        }
+        droppedProject.parentId = sameParentId;
+
+        // Reorder in parent's children array or root
+        if (sameParentId) {
+          const parent = projects.find(p => p.id === sameParentId);
+          if (parent) {
+            parent.children = parent.children.filter(c => c !== droppedProjectId);
+            const targetIdx = parent.children.indexOf(project.id);
+            const insertIdx = zone === 'top' ? targetIdx : targetIdx + 1;
+            parent.children.splice(Math.max(0, insertIdx), 0, droppedProjectId);
+          }
+        } else {
+          // Root level — reorder via order field
+          const rootProjects = projects.filter(p => !p.parentId);
+          const targetIdx = rootProjects.findIndex(p => p.id === project.id);
+          const insertIdx = zone === 'top' ? targetIdx : targetIdx + 1;
+          // Rebuild order by assigning order values
+          rootProjects.splice(rootProjects.findIndex(p => p.id === droppedProjectId), 1);
+          rootProjects.splice(Math.max(0, insertIdx), 0, droppedProject);
+          rootProjects.forEach((p, i) => { p.order = i; });
+        }
+        await GPMStorage.saveProjects(projects);
+      }
+      gpmRenderTree();
       return;
     }
     
-    // Otherwise, handle CHAT drop
+    // ── CHAT drop ──
     let chatId = e.dataTransfer.getData('text/gpm-chat-id');
     
     if (!chatId) {
@@ -767,22 +806,14 @@ function gpmCreateProjectRow(project, allProjects, chatMap) {
       }
     }
     
-    console.log('[GPM] Drop on project:', project.name, 'chatId:', chatId, 'types:', [...e.dataTransfer.types]);
-    
     if (chatId && chatId.trim() && !chatId.startsWith('http')) {
       const cleanId = chatId.trim();
       const chatTitle = e.dataTransfer.getData('text/gpm-chat-title');
-      
       await GPMStorage.assignChat(cleanId, project.id);
-      
       if (chatTitle) {
         const cm = await GPMStorage.getChatMap();
-        if (!cm[cleanId]?.alias) {
-          await GPMStorage.setChatAlias(cleanId, chatTitle);
-        }
+        if (!cm[cleanId]?.alias) await GPMStorage.setChatAlias(cleanId, chatTitle);
       }
-      
-      console.log('[GPM] Chat assigned to project, title:', chatTitle);
       gpmRenderTree();
     }
   });
@@ -833,9 +864,61 @@ function gpmCreateChatRow(chatId, mapping, project, allProjects) {
     e.dataTransfer.effectAllowed = 'copyMove';
     e.dataTransfer.setData('text/gpm-chat-id', chatId);
     e.dataTransfer.setData('text/plain', chatId);
+    e.dataTransfer.setData('text/gpm-chat-projectid', project.id);
     row.style.opacity = '0.5';
   });
   row.addEventListener('dragend', () => { row.style.opacity = ''; });
+
+  // Chat reorder: drop on another chat row
+  row.addEventListener('dragover', (e) => {
+    const draggingChatId = e.dataTransfer.types.includes('text/gpm-chat-id');
+    if (!draggingChatId) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const rect = row.getBoundingClientRect();
+    const zone = (e.clientY - rect.top) < rect.height / 2 ? 'top' : 'bottom';
+    row.dataset.dropZone = zone;
+    row.classList.remove('gpm-drag-top', 'gpm-drag-bottom');
+    row.classList.add(zone === 'top' ? 'gpm-drag-top' : 'gpm-drag-bottom');
+  });
+
+  row.addEventListener('dragleave', () => {
+    row.classList.remove('gpm-drag-top', 'gpm-drag-bottom');
+    delete row.dataset.dropZone;
+  });
+
+  row.addEventListener('drop', async (e) => {
+    const droppedChatId = e.dataTransfer.getData('text/gpm-chat-id');
+    if (!droppedChatId || droppedChatId === chatId) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const zone = row.dataset.dropZone || 'bottom';
+    row.classList.remove('gpm-drag-top', 'gpm-drag-bottom');
+    delete row.dataset.dropZone;
+
+    // Reorder chatIds within the same project
+    const projects = await GPMStorage.getProjects();
+    const proj = projects.find(p => p.id === project.id);
+    if (!proj) return;
+
+    const ids = proj.chatIds || [];
+    const fromIdx = ids.indexOf(droppedChatId);
+    const toIdx = ids.indexOf(chatId);
+    if (fromIdx === -1) {
+      // Chat from another project — assign first
+      await GPMStorage.assignChat(droppedChatId, project.id);
+      gpmRenderTree();
+      return;
+    }
+
+    // Reorder within same project
+    ids.splice(fromIdx, 1);
+    const newIdx = ids.indexOf(chatId);
+    ids.splice(zone === 'top' ? newIdx : newIdx + 1, 0, droppedChatId);
+    proj.chatIds = ids;
+    await GPMStorage.saveProjects(projects);
+    gpmRenderTree();
+  });
 
   row.addEventListener('contextmenu', (e) => {
     e.preventDefault();

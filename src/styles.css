@@ -220,10 +220,23 @@
 }
 
 /* ── Drag & Drop ── */
-.gpm-tree-row.gpm-drag-over {
+.gpm-tree-row.gpm-drag-over,
+[data-gpm="item"].gpm-drag-over,
+[data-gpm="chat"].gpm-drag-over {
   outline: 2px solid var(--gpm-accent);
   outline-offset: -2px;
   background: color-mix(in srgb, var(--gpm-accent) 10%, transparent);
+}
+
+/* Top/bottom reorder indicators */
+[data-gpm="item"].gpm-drag-top,
+[data-gpm="chat"].gpm-drag-top {
+  border-top: 2px solid var(--gpm-accent);
+}
+
+[data-gpm="item"].gpm-drag-bottom,
+[data-gpm="chat"].gpm-drag-bottom {
+  border-bottom: 2px solid var(--gpm-accent);
 }
 
 .gpm-dragging {
