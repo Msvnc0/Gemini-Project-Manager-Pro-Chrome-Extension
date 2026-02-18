@@ -5,8 +5,7 @@
   "description": "__MSG_extensionDescription__",
   "default_locale": "en",
   "permissions": [
-    "storage",
-    "activeTab"
+    "storage"
   ],
   "content_scripts": [
     {
