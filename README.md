@@ -2,15 +2,15 @@
 
 Transform your Gemini AI sidebar into a professional workspace with projects, folders, and quick prompts.
 
-[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/YOUR_EXTENSION_ID?label=Chrome%20Web%20Store)](https://chrome.google.com/webstore/detail/YOUR_EXTENSION_ID)
-[![Users](https://img.shields.io/chrome-web-store/users/YOUR_EXTENSION_ID)](https://chrome.google.com/webstore/detail/YOUR_EXTENSION_ID)
-[![Rating](https://img.shields.io/chrome-web-store/rating/YOUR_EXTENSION_ID)](https://chrome.google.com/webstore/detail/YOUR_EXTENSION_ID)
+[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/jmngplnmgpfacedmkemopgdbapjbcmjk?label=Chrome%20Web%20Store)](https://chromewebstore.google.com/detail/gemini-project-manager-pr/jmngplnmgpfacedmkemopgdbapjbcmjk)
+[![Users](https://img.shields.io/chrome-web-store/users/jmngplnmgpfacedmkemopgdbapjbcmjk)](https://chromewebstore.google.com/detail/gemini-project-manager-pr/jmngplnmgpfacedmkemopgdbapjbcmjk)
+[![Rating](https://img.shields.io/chrome-web-store/rating/jmngplnmgpfacedmkemopgdbapjbcmjk)](https://chromewebstore.google.com/detail/gemini-project-manager-pr/jmngplnmgpfacedmkemopgdbapjbcmjk)
 
 ## 🚀 Installation
 
 ### Option 1: Chrome Web Store (Recommended)
 
-**[Install from Chrome Web Store](https://chrome.google.com/webstore/detail/YOUR_EXTENSION_ID)**
+**[Install from Chrome Web Store](https://chromewebstore.google.com/detail/gemini-project-manager-pr/jmngplnmgpfacedmkemopgdbapjbcmjk)**
 
 ### Option 2: Manual Installation
 
@@ -73,13 +73,6 @@ cd Gemini-Project-Manager-Pro-Chrome-Extension
 - Local storage (no cloud sync)
 - Privacy-focused design
 
-## Installation
-
-1. Download from Chrome Web Store
-2. Click "Add to Chrome"
-3. Visit gemini.google.com
-4. Start organizing your chats!
-
 ## Usage
 
 ### Creating Projects
@@ -106,7 +99,7 @@ All data is stored locally in your browser. No data is sent to external servers.
 ## Support
 
 - 🐛 [Report Issues](https://github.com/Msvnc0/Gemini-Project-Manager-Pro-Chrome-Extension/issues)
-- ⭐ [Rate on Chrome Web Store](https://chrome.google.com/webstore/detail/YOUR_EXTENSION_ID)
+- ⭐ [Rate on Chrome Web Store](https://chromewebstore.google.com/detail/gemini-project-manager-pr/jmngplnmgpfacedmkemopgdbapjbcmjk)
 - 💬 [Discussions](https://github.com/Msvnc0/Gemini-Project-Manager-Pro-Chrome-Extension/discussions)
 
 ## Contributing
@@ -116,7 +109,3 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 MIT License - See [LICENSE](LICENSE) file for details
-
----
-
-**Note:** Replace `YOUR_EXTENSION_ID` with your actual Chrome Web Store extension ID after publishing.
