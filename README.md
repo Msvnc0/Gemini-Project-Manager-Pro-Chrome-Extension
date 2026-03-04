@@ -50,12 +50,14 @@ cd Gemini-Project-Manager-Pro-Chrome-Extension
 - Drag & drop chats into projects
 - Custom icons and colors for each project
 - Nested folder structure support
+- Project reordering via drag & drop
 
 ### ⚡ Quick Prompts
 - Save frequently used prompts
 - One-click prompt insertion
 - Search and filter prompts
 - Backup and restore functionality
+- Token count estimation
 
 ### 🌍 Multi-Language Support
 - English, Turkish, German, French, Spanish
@@ -69,22 +71,23 @@ cd Gemini-Project-Manager-Pro-Chrome-Extension
 - Material Design 3 aesthetics
 
 ### 💾 Data Management
-- Export/import all data
+- Export/import all data as JSON
+- Auto-backup before every save
+- Restore from last backup via Settings
 - Local storage (no cloud sync)
 - Privacy-focused design
 
-## Installation
-
-1. Download from Chrome Web Store
-2. Click "Add to Chrome"
-3. Visit gemini.google.com
-4. Start organizing your chats!
+### 🛡️ Data Protection (v1.1.0)
+- Automatic backup before every data modification
+- "Restore from Backup" button in Settings with timestamp preview
+- Mutex-based write protection for multi-tab safety
+- Cross-tab sync with debounce for smooth performance
 
 ## Usage
 
 ### Creating Projects
 1. Click "+ New Project" in the sidebar
-2. Choose an icon and color
+2. Choose an icon and color (or pick a category preset)
 3. Name your project
 4. Drag chats into the project
 
@@ -97,11 +100,36 @@ cd Gemini-Project-Manager-Pro-Chrome-Extension
 1. Click the ⚙ gear icon in Projects header
 2. Change language
 3. Export/import data
-4. Manage your workspace
+4. Restore from backup if needed
+5. Manage your workspace
+
+### Restoring Lost Data
+If you notice missing chats in your projects:
+1. Click ⚙ in the Projects header
+2. Click "Restore from Backup" — it shows the backup timestamp and content count
+3. Confirm to restore your projects and chats
 
 ## Privacy
 
-All data is stored locally in your browser. No data is sent to external servers.
+All data is stored locally in your browser. No data is sent to external servers. The extension only requires the `storage` permission to save your projects and settings.
+
+## Changelog
+
+### v1.1.0 — Data Safety Update
+- 🐛 **Fixed:** Critical bug where chats assigned to projects would randomly disappear due to false-positive cleanup triggered by Gemini's lazy-loading sidebar
+- 🛡️ **Added:** Auto-backup before every save — your data is always protected
+- 🛡️ **Added:** "Restore from Backup" button in Settings with timestamp and content preview
+- 🛡️ **Added:** Mutex-based write serialization prevents data corruption across multiple tabs
+- ⚡ **Improved:** Cross-tab sync debounced (300ms) for smoother multi-tab experience
+- 🗑️ **Removed:** Aggressive auto-cleanup that incorrectly removed chats not visible in sidebar DOM
+
+### v1.0.0 — Initial Release
+- Project and subfolder creation with custom icons and colors
+- Drag & drop chat organization
+- Quick prompts with search, edit, backup/restore
+- 10-language localization
+- Native Gemini UI integration with dark/light mode
+- Export/import all data as JSON
 
 ## Support
 

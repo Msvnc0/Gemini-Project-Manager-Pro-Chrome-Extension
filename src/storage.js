@@ -8,12 +8,23 @@
  *   gpm_chatMap: { [chatId]: { projectId, alias, pinned } }
  *   gpm_quickPrompts: Array<{ id, title, content, category }>
  *   gpm_settings: { lang, theme }
+ *   gpm_projects_backup: Array<Project>  — auto-backup before each save
+ *   gpm_chatMap_backup: { [chatId]: ... } — auto-backup before each save
  */
 
 const GPMStorage = (() => {
   // ── Helpers ──
   function uid() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+
+  // ── Mutex for serializing writes ──
+  let _writeLock = Promise.resolve();
+
+  function _withLock(fn) {
+    const next = _writeLock.then(fn, fn);
+    _writeLock = next.catch(() => { });
+    return next;
   }
 
   async function _get(key) {
@@ -23,7 +34,7 @@ const GPMStorage = (() => {
 
   async function _set(key, value) {
     await chrome.storage.local.set({ [key]: value });
-    try { chrome.runtime.sendMessage({ type: 'GPM_STORAGE_UPDATED' }); } catch (_) {}
+    try { chrome.runtime.sendMessage({ type: 'GPM_STORAGE_UPDATED' }); } catch (_) { }
   }
 
   // ── Projects ──
@@ -32,6 +43,11 @@ const GPMStorage = (() => {
   }
 
   async function saveProjects(projects) {
+    // Auto-backup: save current state before overwriting
+    const current = await _get('gpm_projects');
+    if (current && Array.isArray(current) && current.length > 0) {
+      await chrome.storage.local.set({ gpm_projects_backup: current, gpm_backup_ts: Date.now() });
+    }
     await _set('gpm_projects', projects);
   }
 
@@ -109,43 +125,56 @@ const GPMStorage = (() => {
   }
 
   async function saveChatMap(map) {
+    // Auto-backup: save current chatMap before overwriting
+    const current = await _get('gpm_chatMap');
+    if (current && Object.keys(current).length > 0) {
+      await chrome.storage.local.set({ gpm_chatMap_backup: current });
+    }
     await _set('gpm_chatMap', map);
   }
 
+  // Mutex-protected assignChat — prevents race conditions across tabs
   async function assignChat(chatId, projectId) {
-    const chatMap = await getChatMap();
-    const projects = await getProjects();
+    return _withLock(async () => {
+      // Re-read fresh data inside the lock to avoid stale writes
+      const chatMap = await getChatMap();
+      const projects = await getProjects();
 
-    // Remove from old project's chatIds
-    if (chatMap[chatId]) {
-      const oldProj = projects.find(p => p.id === chatMap[chatId].projectId);
-      if (oldProj) oldProj.chatIds = oldProj.chatIds.filter(c => c !== chatId);
-    }
+      // Remove from old project's chatIds
+      if (chatMap[chatId]) {
+        const oldProj = projects.find(p => p.id === chatMap[chatId].projectId);
+        if (oldProj) oldProj.chatIds = (oldProj.chatIds || []).filter(c => c !== chatId);
+      }
 
-    chatMap[chatId] = { projectId, alias: chatMap[chatId]?.alias || '', pinned: chatMap[chatId]?.pinned || false };
+      chatMap[chatId] = { projectId, alias: chatMap[chatId]?.alias || '', pinned: chatMap[chatId]?.pinned || false };
 
-    // Add to new project's chatIds
-    const newProj = projects.find(p => p.id === projectId);
-    if (newProj && !newProj.chatIds.includes(chatId)) {
-      newProj.chatIds.push(chatId);
-    }
+      // Add to new project's chatIds
+      const newProj = projects.find(p => p.id === projectId);
+      if (newProj && !(newProj.chatIds || []).includes(chatId)) {
+        if (!newProj.chatIds) newProj.chatIds = [];
+        newProj.chatIds.push(chatId);
+      }
 
-    await saveProjects(projects);
-    await saveChatMap(chatMap);
+      await saveProjects(projects);
+      await saveChatMap(chatMap);
+    });
   }
 
+  // Mutex-protected unassignChat
   async function unassignChat(chatId) {
-    const chatMap = await getChatMap();
-    const projects = await getProjects();
+    return _withLock(async () => {
+      const chatMap = await getChatMap();
+      const projects = await getProjects();
 
-    if (chatMap[chatId]) {
-      const proj = projects.find(p => p.id === chatMap[chatId].projectId);
-      if (proj) proj.chatIds = proj.chatIds.filter(c => c !== chatId);
-      delete chatMap[chatId];
-    }
+      if (chatMap[chatId]) {
+        const proj = projects.find(p => p.id === chatMap[chatId].projectId);
+        if (proj) proj.chatIds = (proj.chatIds || []).filter(c => c !== chatId);
+        delete chatMap[chatId];
+      }
 
-    await saveProjects(projects);
-    await saveChatMap(chatMap);
+      await saveProjects(projects);
+      await saveChatMap(chatMap);
+    });
   }
 
   async function setChatAlias(chatId, alias) {
@@ -225,12 +254,39 @@ const GPMStorage = (() => {
     });
   }
 
+  // ── Backup / Restore ──
+  async function getBackupInfo() {
+    const ts = await _get('gpm_backup_ts');
+    const backup = await _get('gpm_projects_backup');
+    if (!ts || !backup) return null;
+    const totalChats = backup.reduce((sum, p) => sum + (p.chatIds?.length || 0), 0);
+    return { timestamp: ts, projectCount: backup.length, chatCount: totalChats };
+  }
+
+  async function restoreFromBackup() {
+    const backup = await _get('gpm_projects_backup');
+    const chatMapBackup = await _get('gpm_chatMap_backup');
+    if (!backup || !Array.isArray(backup)) return false;
+    // Save current as "pre-restore" in case user wants to undo
+    const current = await _get('gpm_projects');
+    if (current && current.length > 0) {
+      await chrome.storage.local.set({ gpm_projects_pre_restore: current });
+    }
+    await _set('gpm_projects', backup);
+    if (chatMapBackup) {
+      await _set('gpm_chatMap', chatMapBackup);
+    }
+    console.log('[GPM] Restored from backup:', backup.length, 'projects');
+    return true;
+  }
+
   return {
     getProjects, saveProjects, createProject, updateProject, deleteProject,
     getRootProjects, getChildren,
     getChatMap, saveChatMap, assignChat, unassignChat, setChatAlias, togglePinChat,
     getQuickPrompts, saveQuickPrompt, deleteQuickPrompt, updateQuickPrompt,
     getSettings, saveSettings,
-    exportAll, importAll, clearAll
+    exportAll, importAll, clearAll,
+    getBackupInfo, restoreFromBackup
   };
 })();

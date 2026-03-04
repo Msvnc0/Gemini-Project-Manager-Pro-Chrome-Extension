@@ -680,7 +680,7 @@ const GPMUI = (() => {
   // ══════════════════════════════════════
   //  SETTINGS MODAL
   // ══════════════════════════════════════
-  function createSettingsModal(shadowRoot, { settings, onSave, onCancel, onExport, onImport, onClear }) {
+  function createSettingsModal(shadowRoot, { settings, backupInfo, onSave, onCancel, onExport, onImport, onClear, onRestoreBackup }) {
     let lang = settings.lang || 'en';
     const overlay = el('div', { className: 'gpm-overlay' });
 
@@ -709,6 +709,14 @@ const GPMUI = (() => {
       reader.readAsText(file);
     });
 
+    // Build backup info text
+    let backupLabel = t('noBackupAvailable');
+    if (backupInfo) {
+      const date = new Date(backupInfo.timestamp);
+      const timeStr = date.toLocaleString();
+      backupLabel = `${t('restoreBackup')} (${timeStr} — ${backupInfo.projectCount} ${t('projects').toLowerCase()}, ${backupInfo.chatCount} chats)`;
+    }
+
     const modal = el('div', { className: 'gpm-modal' }, [
       el('div', { className: 'gpm-modal-title', textContent: t('settings') }),
 
@@ -734,6 +742,14 @@ const GPMUI = (() => {
             onClick: () => { fileInput.click(); }
           }),
           fileInput,
+          el('button', {
+            className: 'gpm-btn gpm-btn-ghost', textContent: backupLabel, type: 'button',
+            style: { justifyContent: 'flex-start', opacity: backupInfo ? '1' : '0.5' },
+            onClick: () => {
+              if (!backupInfo) { alert(t('noBackupAvailable')); return; }
+              if (confirm(t('restoreConfirm'))) { onRestoreBackup?.(); overlay.remove(); }
+            }
+          }),
           el('button', {
             className: 'gpm-btn gpm-btn-danger', textContent: t('clearData'), type: 'button',
             style: { justifyContent: 'flex-start' },

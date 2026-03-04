@@ -388,13 +388,13 @@ function gpmFindInsertionPoint(sidebar) {
   const targetTexts = ['chats', 'sohbetler', 'recent', 'recents'];
   const walker = document.createTreeWalker(sidebar, NodeFilter.SHOW_TEXT, null);
   let textNode;
-  
+
   while ((textNode = walker.nextNode())) {
     const txt = textNode.textContent?.trim().toLowerCase();
     if (targetTexts.includes(txt)) {
       let el = textNode.parentElement;
       console.log('[GPM] Found "Chats" text in:', el.tagName, el.className?.slice(0, 60));
-      
+
       let insertTarget = el;
       let depth = 0;
       while (el && el !== sidebar && depth < 20) {
@@ -408,7 +408,7 @@ function gpmFindInsertionPoint(sidebar) {
         insertTarget = el;
         depth++;
       }
-      
+
       const resolvedParent = insertTarget.parentElement || sidebar;
       if (insertTarget.parentElement === resolvedParent) {
         return { parent: resolvedParent, before: insertTarget };
@@ -469,11 +469,11 @@ function gpmInjectProjectSection(sidebar) {
   gpmContainer.id = 'gpm-project-section';
 
   const { parent, before } = gpmFindInsertionPoint(sidebar);
-  
+
   // Debug: log where we're inserting
   console.log('[GPM] Inserting into:', parent.tagName, parent.className?.slice(0, 50));
   console.log('[GPM] Before element:', before?.tagName, before?.className?.slice(0, 50), before?.textContent?.slice(0, 30));
-  
+
   try {
     // Verify before is actually a child of parent before attempting insertBefore
     if (before && before.parentElement !== parent) {
@@ -484,7 +484,7 @@ function gpmInjectProjectSection(sidebar) {
     }
   } catch (e) {
     console.warn('[GPM] insertBefore failed, using appendChild fallback:', e.message);
-    try { parent.appendChild(gpmContainer); } catch (_) {}
+    try { parent.appendChild(gpmContainer); } catch (_) { }
   }
 
   gpmRenderTree();
@@ -520,29 +520,11 @@ async function gpmRenderTree() {
       }
     }
   }
-  
-  // ── Auto-cleanup: remove chats that no longer exist in Gemini sidebar ──
-  if (activeChatIds.size > 0) {
-    let cleanupNeeded = false;
-    for (const [cid, mapping] of Object.entries(chatMap)) {
-      if (!activeChatIds.has(cid)) {
-        // Chat was deleted from Gemini — remove from our data
-        console.log('[GPM] Auto-removing deleted chat:', cid, mapping.alias);
-        const proj = projects.find(p => p.id === mapping.projectId);
-        if (proj) {
-          proj.chatIds = (proj.chatIds || []).filter(id => id !== cid);
-        }
-        delete chatMap[cid];
-        cleanupNeeded = true;
-      }
-    }
-    if (cleanupNeeded) {
-      await GPMStorage.saveProjects(projects);
-      await GPMStorage.saveChatMap(chatMap);
-      aliasUpdated = false; // already saved
-    }
-  }
-  
+
+  // NOTE: Auto-cleanup was removed — Gemini lazy-loads sidebar chats,
+  // so DOM-based cleanup caused false positives and data loss.
+  // Users can manually remove chats via right-click → "Remove from Project".
+
   if (aliasUpdated) {
     await GPMStorage.saveChatMap(chatMap);
   }
@@ -700,19 +682,19 @@ function gpmCreateProjectRow(project, allProjects, chatMap) {
     else if (zone === 'top') row.classList.add('gpm-drag-top');
     else row.classList.add('gpm-drag-bottom');
   });
-  
+
   row.addEventListener('dragleave', () => {
     row.classList.remove('gpm-drag-over', 'gpm-drag-top', 'gpm-drag-bottom');
     delete row.dataset.dropZone;
   });
-  
+
   row.addEventListener('drop', async (e) => {
     e.preventDefault();
     e.stopPropagation();
     const zone = row.dataset.dropZone || 'center';
     row.classList.remove('gpm-drag-over', 'gpm-drag-top', 'gpm-drag-bottom');
     delete row.dataset.dropZone;
-    
+
     // Check if a PROJECT is being dropped
     const droppedProjectId = e.dataTransfer.getData('text/gpm-project-id');
     if (droppedProjectId && droppedProjectId !== project.id) {
@@ -723,7 +705,7 @@ function gpmCreateProjectRow(project, allProjects, chatMap) {
         if (p.parentId) return isDescendant(parentId, p.parentId);
         return false;
       };
-      
+
       if (isDescendant(droppedProjectId, project.id)) {
         console.warn('[GPM] Cannot move project into its own descendant');
         return;
@@ -746,7 +728,7 @@ function gpmCreateProjectRow(project, allProjects, chatMap) {
       } else {
         // ── REORDER: move droppedProject before/after project (same level) ──
         const sameParentId = project.parentId || null;
-        
+
         // Remove from old parent
         if (droppedProject.parentId) {
           const oldParent = projects.find(p => p.id === droppedProject.parentId);
@@ -778,10 +760,10 @@ function gpmCreateProjectRow(project, allProjects, chatMap) {
       gpmRenderTree();
       return;
     }
-    
+
     // ── CHAT drop ──
     let chatId = e.dataTransfer.getData('text/gpm-chat-id');
-    
+
     if (!chatId) {
       const plain = e.dataTransfer.getData('text/plain');
       if (plain) {
@@ -793,7 +775,7 @@ function gpmCreateProjectRow(project, allProjects, chatMap) {
         }
       }
     }
-    
+
     if (!chatId) {
       const uri = e.dataTransfer.getData('text/uri-list');
       if (uri) {
@@ -805,7 +787,7 @@ function gpmCreateProjectRow(project, allProjects, chatMap) {
         }
       }
     }
-    
+
     if (chatId && chatId.trim() && !chatId.startsWith('http')) {
       const cleanId = chatId.trim();
       const chatTitle = e.dataTransfer.getData('text/gpm-chat-title');
@@ -939,38 +921,46 @@ function gpmShowProjectContextMenu(x, y, project, allProjects) {
     console.error('[GPM] Modal root not initialized!');
     return;
   }
-  
+
   GPMUI.showContextMenu(gpmModalRoot, {
     x, y,
     items: [
-      { icon: '💬', label: t('newChatInProject'), action: () => {
-        console.log('[GPM] New chat in project clicked:', project.name, 'projectId:', project.id);
-        gpmPendingChatAssignment = { projectId: project.id, _ts: Date.now() };
-        console.log('[GPM] Pending assignment set:', gpmPendingChatAssignment);
-        gpmTriggerNewChat();
-      }},
-      { icon: '📂', label: t('createSubfolder'), action: () => {
-        console.log('[GPM] Create subfolder clicked');
-        GPMUI.createProjectModal(gpmModalRoot, {
-          isSubfolder: true,
-          onSave: async ({ name, icon, color }) => { await GPMStorage.createProject({ name, icon, color, parentId: project.id }); gpmRenderTree(); },
-          onCancel: () => {}
-        });
-      }},
+      {
+        icon: '💬', label: t('newChatInProject'), action: () => {
+          console.log('[GPM] New chat in project clicked:', project.name, 'projectId:', project.id);
+          gpmPendingChatAssignment = { projectId: project.id, _ts: Date.now() };
+          console.log('[GPM] Pending assignment set:', gpmPendingChatAssignment);
+          gpmTriggerNewChat();
+        }
+      },
+      {
+        icon: '📂', label: t('createSubfolder'), action: () => {
+          console.log('[GPM] Create subfolder clicked');
+          GPMUI.createProjectModal(gpmModalRoot, {
+            isSubfolder: true,
+            onSave: async ({ name, icon, color }) => { await GPMStorage.createProject({ name, icon, color, parentId: project.id }); gpmRenderTree(); },
+            onCancel: () => { }
+          });
+        }
+      },
       { divider: true },
-      { icon: '✏️', label: t('rename'), action: () => {
-        console.log('[GPM] Rename clicked');
-        GPMUI.createProjectModal(gpmModalRoot, {
-          existing: project,
-          onSave: async ({ name, icon, color }) => { await GPMStorage.updateProject(project.id, { name, icon, color }); gpmRenderTree(); },
-          onCancel: () => {}
-        });
-      }},
+      {
+        icon: '✏️', label: t('rename'), action: () => {
+          console.log('[GPM] Rename clicked');
+          GPMUI.createProjectModal(gpmModalRoot, {
+            existing: project,
+            onSave: async ({ name, icon, color }) => { await GPMStorage.updateProject(project.id, { name, icon, color }); gpmRenderTree(); },
+            onCancel: () => { }
+          });
+        }
+      },
       { divider: true },
-      { icon: '🗑️', label: t('delete'), danger: true, action: async () => {
-        console.log('[GPM] Delete clicked');
-        if (confirm(t('deleteConfirm'))) { await GPMStorage.deleteProject(project.id); gpmRenderTree(); }
-      }}
+      {
+        icon: '🗑️', label: t('delete'), danger: true, action: async () => {
+          console.log('[GPM] Delete clicked');
+          if (confirm(t('deleteConfirm'))) { await GPMStorage.deleteProject(project.id); gpmRenderTree(); }
+        }
+      }
     ]
   });
 }
@@ -987,19 +977,25 @@ function gpmShowChatContextMenu(x, y, chatId, mapping, allProjects) {
   GPMUI.showContextMenu(gpmModalRoot, {
     x, y,
     items: [
-      { icon: isPinned ? '📌' : '📍', label: isPinned ? t('unpinChat') : t('pinChat'),
-        action: async () => { await GPMStorage.togglePinChat(chatId); gpmRenderTree(); } },
-      { icon: '✏️', label: t('renameChat'), action: () => {
-        GPMUI.createRenameModal(gpmModalRoot, {
-          currentName: mapping?.alias || chatId,
-          onSave: async (n) => { await GPMStorage.setChatAlias(chatId, n); gpmRenderTree(); },
-          onCancel: () => {}
-        });
-      }},
+      {
+        icon: isPinned ? '📌' : '📍', label: isPinned ? t('unpinChat') : t('pinChat'),
+        action: async () => { await GPMStorage.togglePinChat(chatId); gpmRenderTree(); }
+      },
+      {
+        icon: '✏️', label: t('renameChat'), action: () => {
+          GPMUI.createRenameModal(gpmModalRoot, {
+            currentName: mapping?.alias || chatId,
+            onSave: async (n) => { await GPMStorage.setChatAlias(chatId, n); gpmRenderTree(); },
+            onCancel: () => { }
+          });
+        }
+      },
       { icon: '📂', label: t('moveToProject'), submenu: moveSubmenu },
       { divider: true },
-      { icon: '🗑️', label: t('removeFromProject'), danger: true,
-        action: async () => { await GPMStorage.unassignChat(chatId); gpmRenderTree(); } }
+      {
+        icon: '🗑️', label: t('removeFromProject'), danger: true,
+        action: async () => { await GPMStorage.unassignChat(chatId); gpmRenderTree(); }
+      }
     ]
   });
 }
@@ -1010,10 +1006,10 @@ function gpmShowChatContextMenu(x, y, chatId, mapping, allProjects) {
 
 function gpmTriggerNewChat() {
   console.log('[GPM] Triggering new chat...');
-  
+
   const currentPath = window.location.pathname;
   const isOnHome = currentPath === '/app' || currentPath === '/app/' || currentPath === '/';
-  
+
   if (isOnHome) {
     // Already on home page — just focus the input area so user can start typing
     // The pending assignment will fire when URL changes to /app/<id> after sending
@@ -1022,29 +1018,29 @@ function gpmTriggerNewChat() {
     if (input) input.focus();
     return;
   }
-  
+
   // Not on home — need to navigate there
   // Try clicking the "New chat" link first (SPA navigation)
   const candidates = document.querySelectorAll('a[href="/app"]');
   let clicked = false;
-  
+
   for (const el of candidates) {
     const ariaLabel = (el.getAttribute('aria-label') || '').toLowerCase();
     const text = (el.textContent || '').trim().toLowerCase();
     if (text.includes('new chat') || text.includes('yeni sohbet') ||
-        ariaLabel.includes('new chat') || ariaLabel.includes('yeni sohbet')) {
+      ariaLabel.includes('new chat') || ariaLabel.includes('yeni sohbet')) {
       console.log('[GPM] Clicking "New chat" link');
       el.click();
       clicked = true;
       break;
     }
   }
-  
+
   if (!clicked && candidates.length > 0) {
     candidates[0].click();
     clicked = true;
   }
-  
+
   if (!clicked) {
     console.log('[GPM] Fallback: navigating to /app');
     window.location.href = 'https://gemini.google.com/app';
@@ -1066,15 +1062,15 @@ function gpmGetCurrentChatId() {
   // Gemini uses /app/<id> format for chats
   // /app alone = home page (no chat), /app/<id> = specific chat
   const path = window.location.pathname;
-  
+
   // New format: /app/<chatId>
   const appMatch = path.match(/^\/app\/([a-zA-Z0-9_-]+)/);
   if (appMatch) return appMatch[1];
-  
+
   // Legacy formats
   const legacyMatch = path.match(/\/(?:chat|c)\/([a-zA-Z0-9_-]+)/);
   if (legacyMatch) return legacyMatch[1];
-  
+
   return null;
 }
 
@@ -1113,23 +1109,23 @@ function gpmOnNavigate() {
 function gpmObserveNewChats() {
   let lastChatId = gpmGetCurrentChatId();
   let lastUrl = location.href;
-  
+
   // Watch for URL changes — when a new chat is created, URL changes to /chat/xxx
   // This happens AFTER the user sends their first message
   setInterval(() => {
     const currentUrl = location.href;
     const id = gpmGetCurrentChatId();
-    
+
     // Detect URL change
     if (currentUrl !== lastUrl) {
       lastUrl = currentUrl;
       console.log('[GPM] URL changed to:', currentUrl, 'chatId:', id);
     }
-    
+
     if (id && id !== lastChatId) {
       console.log('[GPM] Chat ID changed:', lastChatId, '->', id);
       lastChatId = id;
-      
+
       if (gpmPendingChatAssignment) {
         const { projectId } = gpmPendingChatAssignment;
         gpmPendingChatAssignment = null;
@@ -1143,7 +1139,7 @@ function gpmObserveNewChats() {
         gpmRenderTree();
       }
     }
-    
+
     // Also detect when we navigate AWAY from a chat (to home/app page)
     // This means "new chat" was triggered
     if (!id && lastChatId) {
@@ -1151,7 +1147,7 @@ function gpmObserveNewChats() {
       console.log('[GPM] Navigated to home page (new chat pending:', !!gpmPendingChatAssignment, ')');
     }
   }, 500);
-  
+
   // Timeout for pending assignment (120 seconds — user needs time to type)
   setInterval(() => {
     if (gpmPendingChatAssignment && gpmPendingChatAssignment._ts) {
@@ -1162,24 +1158,17 @@ function gpmObserveNewChats() {
     }
   }, 5000);
 
-  // Enhance native chat items for drag & drop + detect deleted chats
+  // Enhance native chat items for drag & drop
+  // NOTE: Chat count observer removed — it triggered false-positive auto-cleanup
+  // when Gemini's sidebar lazy-loaded or re-rendered DOM elements.
   const sidebar = document.querySelector(GPM_SELECTORS.sidebar);
   if (sidebar) {
     let enhanceTimeout = null;
-    let lastChatCount = document.querySelectorAll('a[href^="/app/"]').length;
-    
+
     new MutationObserver(() => {
       clearTimeout(enhanceTimeout);
       enhanceTimeout = setTimeout(() => {
         gpmEnhanceNativeChatItems();
-        
-        // Check if chat count decreased (a chat was deleted)
-        const currentCount = document.querySelectorAll('a[href^="/app/"]').length;
-        if (currentCount < lastChatCount) {
-          console.log('[GPM] Chat count decreased:', lastChatCount, '->', currentCount, '— syncing');
-          gpmRenderTree();
-        }
-        lastChatCount = currentCount;
       }, 500);
     }).observe(sidebar, { childList: true, subtree: true });
     gpmEnhanceNativeChatItems();
@@ -1189,12 +1178,12 @@ function gpmObserveNewChats() {
 function gpmEnhanceNativeChatItems() {
   // Gemini uses /app/<id> format — find all chat links (exclude /app itself which is "New chat")
   const chatItems = document.querySelectorAll('a[href^="/app/"]');
-  
+
   chatItems.forEach(item => {
     if (item.dataset.gpmEnhanced) return;
     // Skip items inside our own GPM container
     if (item.closest('[data-gpm]')) return;
-    
+
     item.dataset.gpmEnhanced = 'true';
 
     const href = item.getAttribute('href') || '';
@@ -1205,10 +1194,10 @@ function gpmEnhanceNativeChatItems() {
 
     // Make the whole <a> draggable
     item.draggable = true;
-    
+
     // Get the chat title from the link text
     const chatTitle = (item.textContent || '').trim();
-    
+
     item.addEventListener('dragstart', (e) => {
       e.stopPropagation();
       console.log('[GPM] Drag started for chat:', chatId, 'title:', chatTitle);
@@ -1218,7 +1207,7 @@ function gpmEnhanceNativeChatItems() {
       e.dataTransfer.setData('text/plain', chatId);
       item.style.opacity = '0.5';
     });
-    
+
     item.addEventListener('dragend', () => {
       item.style.opacity = '';
     });
@@ -1227,9 +1216,9 @@ function gpmEnhanceNativeChatItems() {
     item.addEventListener('contextmenu', async (e) => {
       e.preventDefault();
       e.stopPropagation();
-      
+
       if (!gpmModalRoot) return;
-      
+
       const projects = await GPMStorage.getProjects();
       const chatMap = await GPMStorage.getChatMap();
       gpmShowChatContextMenu(e.clientX, e.clientY, chatId, chatMap[chatId], projects);
@@ -1312,16 +1301,16 @@ function gpmObserveQuickPromptButton() {
     if (!gpmIsContextValid()) { clearInterval(checkInterval); return; }
     const btn = document.querySelector('#gpm-qp-trigger');
     const leadingActions = document.querySelector('.leading-actions-wrapper');
-    
+
     // If button exists and is still in DOM, we're good
     if (btn && btn.parentElement) return;
-    
+
     // If leading-actions exists but button is missing, re-inject
     if (leadingActions) {
       gpmInjectQuickPromptTrigger();
     }
   }, 1000); // Check every second
-  
+
   // Also observe DOM changes in the toolbar area
   const observer = new MutationObserver(() => {
     const btn = document.querySelector('#gpm-qp-trigger');
@@ -1330,7 +1319,7 @@ function gpmObserveQuickPromptButton() {
       setTimeout(gpmInjectQuickPromptTrigger, 100);
     }
   });
-  
+
   // Start observing when body is ready
   const startObserving = () => {
     const body = document.body;
@@ -1338,7 +1327,7 @@ function gpmObserveQuickPromptButton() {
       observer.observe(body, { childList: true, subtree: true });
     }
   };
-  
+
   if (document.body) {
     startObserving();
   } else {
@@ -1369,7 +1358,7 @@ async function gpmToggleQuickPrompts() {
           gpmModalRoot.querySelector('.gpm-quick-prompts')?.remove();
           gpmToggleQuickPrompts();
         },
-        onCancel: () => {}
+        onCancel: () => { }
       });
     },
     onEdit: (prompt) => {
@@ -1380,7 +1369,7 @@ async function gpmToggleQuickPrompts() {
           gpmModalRoot.querySelector('.gpm-quick-prompts')?.remove();
           gpmToggleQuickPrompts();
         },
-        onCancel: () => {}
+        onCancel: () => { }
       });
     },
     onBackup: async () => {
@@ -1456,17 +1445,19 @@ function gpmShowCreateProjectModal() {
       await GPMStorage.createProject({ name, icon, color });
       gpmRenderTree();
     },
-    onCancel: () => {}
+    onCancel: () => { }
   });
 }
 
 async function gpmShowSettingsModal() {
   if (!gpmModalRoot) return;
   const settings = await GPMStorage.getSettings();
+  const backupInfo = await GPMStorage.getBackupInfo();
   GPMUI.createSettingsModal(gpmModalRoot, {
     settings,
+    backupInfo,
     onSave: async (s) => { await GPMStorage.saveSettings(s); gpmSetLang(s.lang); gpmRenderTree(); },
-    onCancel: () => {},
+    onCancel: () => { },
     onExport: async () => {
       const json = await GPMStorage.exportAll();
       const blob = new Blob([json], { type: 'application/json' });
@@ -1479,7 +1470,12 @@ async function gpmShowSettingsModal() {
       try { await GPMStorage.importAll(jsonStr); const s = await GPMStorage.getSettings(); gpmSetLang(s.lang); gpmRenderTree(); }
       catch (e) { alert(t('importError')); }
     },
-    onClear: async () => { await GPMStorage.clearAll(); gpmSetLang('en'); gpmRenderTree(); }
+    onClear: async () => { await GPMStorage.clearAll(); gpmSetLang('en'); gpmRenderTree(); },
+    onRestoreBackup: async () => {
+      const ok = await GPMStorage.restoreFromBackup();
+      if (ok) { gpmRenderTree(); }
+      else { alert(t('noBackupAvailable')); }
+    }
   });
 }
 
@@ -1487,10 +1483,16 @@ async function gpmShowSettingsModal() {
 //  CROSS-TAB SYNC & BOOT
 // ══════════════════════════════════════
 
+// Debounced cross-tab sync — prevents cascade re-renders
+let _gpmSyncTimeout = null;
+
 try {
   chrome.runtime.onMessage.addListener((msg) => {
     if (!gpmIsContextValid()) return;
-    if (msg.type === 'GPM_SYNC') gpmRenderTree();
+    if (msg.type === 'GPM_SYNC') {
+      clearTimeout(_gpmSyncTimeout);
+      _gpmSyncTimeout = setTimeout(() => gpmRenderTree(), 300);
+    }
   });
 } catch (e) {
   console.warn('[GPM] Could not register message listener:', e.message);
