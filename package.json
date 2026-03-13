@@ -1,0 +1,26 @@
+{
+  "name": "gemini-project-manager-pro",
+  "version": "1.1.0",
+  "private": true,
+  "description": "Chrome extension for organizing Gemini AI chats into projects",
+  "type": "module",
+  "scripts": {
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "format": "prettier --write \"src/**/*.{js,css,json}\"",
+    "format:check": "prettier --check \"src/**/*.{js,css,json}\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@vitest/coverage-v8": "^3.0.0",
+    "eslint": "^9.0.0",
+    "eslint-config-prettier": "^10.0.0",
+    "globals": "^15.0.0",
+    "jsdom": "^28.1.0",
+    "prettier": "^3.4.0",
+    "vitest": "^3.0.0"
+  }
+}

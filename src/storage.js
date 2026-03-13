@@ -15,7 +15,8 @@
 const GPMStorage = (() => {
   // ── Helpers ──
   function uid() {
-    return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    const arr = crypto.getRandomValues(new Uint32Array(2));
+    return arr[0].toString(36) + arr[1].toString(36) + Date.now().toString(36);
   }
 
   // ── Mutex for serializing writes ──
@@ -28,13 +29,23 @@ const GPMStorage = (() => {
   }
 
   async function _get(key) {
-    const result = await chrome.storage.local.get(key);
-    return result[key];
+    try {
+      const result = await chrome.storage.local.get(key);
+      return result[key];
+    } catch (e) {
+      if (e.message?.includes('Extension context invalidated')) return undefined;
+      throw e;
+    }
   }
 
   async function _set(key, value) {
-    await chrome.storage.local.set({ [key]: value });
-    try { chrome.runtime.sendMessage({ type: 'GPM_STORAGE_UPDATED' }); } catch (_) { }
+    try {
+      await chrome.storage.local.set({ [key]: value });
+      try { chrome.runtime.sendMessage({ type: 'GPM_STORAGE_UPDATED' }); } catch (_) { }
+    } catch (e) {
+      if (e.message?.includes('Extension context invalidated')) return;
+      throw e;
+    }
   }
 
   // ── Projects ──
@@ -115,10 +126,6 @@ const GPMStorage = (() => {
     return projects.filter(p => !p.parentId);
   }
 
-  function getChildren(projects, parentId) {
-    return projects.filter(p => p.parentId === parentId);
-  }
-
   // ── Chat Map ──
   async function getChatMap() {
     return (await _get('gpm_chatMap')) || {};
@@ -146,7 +153,7 @@ const GPMStorage = (() => {
         if (oldProj) oldProj.chatIds = (oldProj.chatIds || []).filter(c => c !== chatId);
       }
 
-      chatMap[chatId] = { projectId, alias: chatMap[chatId]?.alias || '', pinned: chatMap[chatId]?.pinned || false };
+      chatMap[chatId] = { projectId, alias: chatMap[chatId]?.alias || '', pinned: chatMap[chatId]?.pinned || false, _autoResolved: chatMap[chatId]?._autoResolved || false };
 
       // Add to new project's chatIds
       const newProj = projects.find(p => p.id === projectId);
@@ -181,6 +188,7 @@ const GPMStorage = (() => {
     const chatMap = await getChatMap();
     if (chatMap[chatId]) {
       chatMap[chatId].alias = alias;
+      chatMap[chatId]._autoResolved = false; // Manual rename — protect from auto-overwrite
       await saveChatMap(chatMap);
     }
   }
@@ -236,12 +244,96 @@ const GPMStorage = (() => {
     return JSON.stringify({ gpm_projects: projects, gpm_chatMap: chatMap, gpm_quickPrompts: quickPrompts, gpm_settings: settings }, null, 2);
   }
 
+  // ── Validation & Sanitization Helpers ──
+  function sanitizeString(str) {
+    if (typeof str !== 'string') return '';
+    return str.replace(/[<>]/g, '').trim();
+  }
+
+  function validateProject(p) {
+    if (!p || typeof p !== 'object') return null;
+    if (typeof p.id !== 'string' || !p.id) return null;
+    if (typeof p.name !== 'string' || !p.name) return null;
+    return {
+      id: sanitizeString(p.id),
+      name: sanitizeString(p.name),
+      icon: typeof p.icon === 'string' ? p.icon.slice(0, 8) : '📁',
+      color: typeof p.color === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(p.color) ? p.color : '#8ab4f8',
+      parentId: typeof p.parentId === 'string' ? sanitizeString(p.parentId) : null,
+      children: Array.isArray(p.children) ? p.children.filter(c => typeof c === 'string').map(sanitizeString) : [],
+      chatIds: Array.isArray(p.chatIds) ? p.chatIds.filter(c => typeof c === 'string').map(sanitizeString) : [],
+      collapsed: typeof p.collapsed === 'boolean' ? p.collapsed : false,
+      order: typeof p.order === 'number' ? p.order : undefined
+    };
+  }
+
+  function validateChatMapping(entry) {
+    if (!entry || typeof entry !== 'object') return null;
+    if (typeof entry.projectId !== 'string') return null;
+    return {
+      projectId: sanitizeString(entry.projectId),
+      alias: typeof entry.alias === 'string' ? sanitizeString(entry.alias) : '',
+      pinned: typeof entry.pinned === 'boolean' ? entry.pinned : false
+    };
+  }
+
+  function validateQuickPrompt(p) {
+    if (!p || typeof p !== 'object') return null;
+    if (typeof p.title !== 'string' || !p.title) return null;
+    if (typeof p.content !== 'string' || !p.content) return null;
+    return {
+      id: typeof p.id === 'string' ? sanitizeString(p.id) : uid(),
+      title: sanitizeString(p.title),
+      content: sanitizeString(p.content),
+      category: typeof p.category === 'string' ? sanitizeString(p.category) : 'General'
+    };
+  }
+
+  function validateSettings(s) {
+    if (!s || typeof s !== 'object') return null;
+    const validLangs = ['ar', 'bn', 'de', 'en', 'es', 'fr', 'hi', 'id', 'it', 'ja', 'ko', 'pt', 'ru', 'th', 'tr', 'vi', 'zh'];
+    const validThemes = ['auto', 'dark', 'light'];
+    return {
+      lang: validLangs.includes(s.lang) ? s.lang : 'en',
+      theme: validThemes.includes(s.theme) ? s.theme : 'auto'
+    };
+  }
+
   async function importAll(jsonString) {
     const data = JSON.parse(jsonString);
-    if (data.gpm_projects) await _set('gpm_projects', data.gpm_projects);
-    if (data.gpm_chatMap) await _set('gpm_chatMap', data.gpm_chatMap);
-    if (data.gpm_quickPrompts) await _set('gpm_quickPrompts', data.gpm_quickPrompts);
-    if (data.gpm_settings) await _set('gpm_settings', data.gpm_settings);
+
+    // Pre-import backup of current data
+    const [curProjects, curChatMap, curPrompts] = await Promise.all([
+      _get('gpm_projects'), _get('gpm_chatMap'), _get('gpm_quickPrompts')
+    ]);
+    await chrome.storage.local.set({
+      gpm_pre_import_projects: curProjects || [],
+      gpm_pre_import_chatMap: curChatMap || {},
+      gpm_pre_import_quickPrompts: curPrompts || [],
+      gpm_pre_import_ts: Date.now()
+    });
+
+    // Validate and sanitize each data field before writing
+    if (data.gpm_projects && Array.isArray(data.gpm_projects)) {
+      const validated = data.gpm_projects.map(validateProject).filter(Boolean);
+      await _set('gpm_projects', validated);
+    }
+    if (data.gpm_chatMap && typeof data.gpm_chatMap === 'object' && !Array.isArray(data.gpm_chatMap)) {
+      const validated = {};
+      for (const [chatId, mapping] of Object.entries(data.gpm_chatMap)) {
+        const clean = validateChatMapping(mapping);
+        if (clean) validated[sanitizeString(chatId)] = clean;
+      }
+      await _set('gpm_chatMap', validated);
+    }
+    if (data.gpm_quickPrompts && Array.isArray(data.gpm_quickPrompts)) {
+      const validated = data.gpm_quickPrompts.map(validateQuickPrompt).filter(Boolean);
+      await _set('gpm_quickPrompts', validated);
+    }
+    if (data.gpm_settings && typeof data.gpm_settings === 'object') {
+      const validated = validateSettings(data.gpm_settings);
+      if (validated) await _set('gpm_settings', validated);
+    }
   }
 
   async function clearAll() {
@@ -249,8 +341,7 @@ const GPMStorage = (() => {
       gpm_projects: [],
       gpm_chatMap: {},
       gpm_quickPrompts: [],
-      gpm_settings: { lang: 'en', theme: 'auto' },
-      gpm_pinnedChats: {}
+      gpm_settings: { lang: 'en', theme: 'auto' }
     });
   }
 
@@ -276,13 +367,13 @@ const GPMStorage = (() => {
     if (chatMapBackup) {
       await _set('gpm_chatMap', chatMapBackup);
     }
-    console.log('[GPM] Restored from backup:', backup.length, 'projects');
+    if (typeof console !== 'undefined' && console.log) console.log('[GPM] Restored from backup:', backup.length, 'projects');
     return true;
   }
 
   return {
     getProjects, saveProjects, createProject, updateProject, deleteProject,
-    getRootProjects, getChildren,
+    getRootProjects,
     getChatMap, saveChatMap, assignChat, unassignChat, setChatAlias, togglePinChat,
     getQuickPrompts, saveQuickPrompt, deleteQuickPrompt, updateQuickPrompt,
     getSettings, saveSettings,

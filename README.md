@@ -2,15 +2,15 @@
 
 Transform your Gemini AI sidebar into a professional workspace with projects, folders, and quick prompts.
 
-[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/YOUR_EXTENSION_ID?label=Chrome%20Web%20Store)](https://chrome.google.com/webstore/detail/YOUR_EXTENSION_ID)
-[![Users](https://img.shields.io/chrome-web-store/users/YOUR_EXTENSION_ID)](https://chrome.google.com/webstore/detail/YOUR_EXTENSION_ID)
-[![Rating](https://img.shields.io/chrome-web-store/rating/YOUR_EXTENSION_ID)](https://chrome.google.com/webstore/detail/YOUR_EXTENSION_ID)
+[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/jmngplnmgpfacedmkemopgdbapjbcmjk?label=Chrome%20Web%20Store)](https://chromewebstore.google.com/detail/gemini-project-manager-pr/jmngplnmgpfacedmkemopgdbapjbcmjk)
+[![Users](https://img.shields.io/chrome-web-store/users/jmngplnmgpfacedmkemopgdbapjbcmjk)](https://chromewebstore.google.com/detail/gemini-project-manager-pr/jmngplnmgpfacedmkemopgdbapjbcmjk)
+[![Rating](https://img.shields.io/chrome-web-store/rating/jmngplnmgpfacedmkemopgdbapjbcmjk)](https://chromewebstore.google.com/detail/gemini-project-manager-pr/jmngplnmgpfacedmkemopgdbapjbcmjk)
 
 ## 🚀 Installation
 
 ### Option 1: Chrome Web Store (Recommended)
 
-**[Install from Chrome Web Store](https://chrome.google.com/webstore/detail/YOUR_EXTENSION_ID)**
+**[Install from Chrome Web Store](https://chromewebstore.google.com/detail/gemini-project-manager-pr/jmngplnmgpfacedmkemopgdbapjbcmjk)**
 
 ### Option 2: Manual Installation
 
@@ -62,7 +62,10 @@ cd Gemini-Project-Manager-Pro-Chrome-Extension
 ### 🌍 Multi-Language Support
 - English, Turkish, German, French, Spanish
 - Italian, Portuguese, Russian, Japanese, Chinese
+- Hindi, Korean, Arabic, Vietnamese, Indonesian
+- Bengali, Thai
 - Automatic language detection
+- 17 languages supported
 
 ### 🎨 Native Integration
 - Seamless Gemini UI integration
@@ -123,6 +126,20 @@ All data is stored locally in your browser. No data is sent to external servers.
 - ⚡ **Improved:** Cross-tab sync debounced (300ms) for smoother multi-tab experience
 - 🗑️ **Removed:** Aggressive auto-cleanup that incorrectly removed chats not visible in sidebar DOM
 
+### v1.2.0 — DOM Resilience & Language Expansion Update
+- 🔍 **Added:** Search bar in Projects sidebar — quickly filter and find chats across all projects
+- 🛡️ **Added:** Self-healing DOM observer — extension auto-recovers when Gemini re-mounts its page
+- 🛡️ **Added:** Adaptive selector engine with structural discovery fallbacks for sidebar and input area
+- 🛡️ **Added:** Multi-strategy toolbar detection (CSS classes, content-based "Tools" label search, structural walk-up)
+- 🛡️ **Added:** DOM health monitor with container watchdog
+- 🐛 **Fixed:** Quick Prompt ⚡ button stuck as floating fallback — retry logic now properly relocates it into the toolbar once available
+- 🐛 **Fixed:** MutationObserver and interval check suppressed by floating button presence — both now continue retrying until toolbar placement succeeds
+- ⚡ **Improved:** Quick Prompt button toolbar discovery walks up from "Tools" label to find proper toolbar row container
+- ⚡ **Improved:** MutationObserver uses content-based detection ("Tools" label in 17 languages) to trigger toolbar injection
+- 🌍 **Added:** 8 new languages: Arabic (العربية), Bengali (বাংলা), Hindi (हिন्दी), Indonesian (Bahasa Indonesia), Korean (한국어), Portuguese (Português), Thai (ไทย), Vietnamese (Tiếng Việt)
+- 🐛 **Fixed:** Data import now correctly preserves Hindi, Korean, and Arabic language preferences
+- 📊 Expanded from 9 → 17 languages total
+
 ### v1.0.0 — Initial Release
 - Project and subfolder creation with custom icons and colors
 - Drag & drop chat organization
@@ -134,7 +151,7 @@ All data is stored locally in your browser. No data is sent to external servers.
 ## Support
 
 - 🐛 [Report Issues](https://github.com/Msvnc0/Gemini-Project-Manager-Pro-Chrome-Extension/issues)
-- ⭐ [Rate on Chrome Web Store](https://chrome.google.com/webstore/detail/YOUR_EXTENSION_ID)
+- ⭐ [Rate on Chrome Web Store](https://chromewebstore.google.com/detail/gemini-project-manager-pr/jmngplnmgpfacedmkemopgdbapjbcmjk)
 - 💬 [Discussions](https://github.com/Msvnc0/Gemini-Project-Manager-Pro-Chrome-Extension/discussions)
 
 ## Contributing
@@ -147,4 +164,4 @@ MIT License - See [LICENSE](LICENSE) file for details
 
 ---
 
-**Note:** Replace `YOUR_EXTENSION_ID` with your actual Chrome Web Store extension ID after publishing.
+**Published on Chrome Web Store:** [Gemini Project Manager Pro](https://chromewebstore.google.com/detail/gemini-project-manager-pr/jmngplnmgpfacedmkemopgdbapjbcmjk)

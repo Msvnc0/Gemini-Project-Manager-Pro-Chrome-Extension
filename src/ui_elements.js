@@ -47,13 +47,78 @@ const GPMUI = (() => {
     { icon: '🎨', key: 'categoryDesign', color: '#ff8bcb' },
   ];
 
+  // ── SVG Icon Factory (safe alternative to innerHTML) ──
+  const SVG_ICONS = {
+    edit: { viewBox: '0 0 24 24', paths: ['M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7', 'M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z'] },
+    trash: { viewBox: '0 0 24 24', paths: ['M3 6h18', 'M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2', 'M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6'], lines: [{ x1: 10, y1: 11, x2: 10, y2: 17 }, { x1: 14, y1: 11, x2: 14, y2: 17 }] },
+    download: { viewBox: '0 0 24 24', paths: ['M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'], polylines: ['7 10 12 15 17 10'], lines: [{ x1: 12, y1: 15, x2: 12, y2: 3 }] },
+    upload: { viewBox: '0 0 24 24', paths: ['M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'], polylines: ['17 8 12 3 7 8'], lines: [{ x1: 12, y1: 3, x2: 12, y2: 15 }] }
+  };
+
+  function createSVGIcon(name, size = 16) {
+    const icon = SVG_ICONS[name];
+    if (!icon) return document.createTextNode('');
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('width', String(size));
+    svg.setAttribute('height', String(size));
+    svg.setAttribute('viewBox', icon.viewBox);
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '2');
+    (icon.paths || []).forEach(d => {
+      const path = document.createElementNS(NS, 'path');
+      path.setAttribute('d', d);
+      svg.appendChild(path);
+    });
+    (icon.polylines || []).forEach(pts => {
+      const poly = document.createElementNS(NS, 'polyline');
+      poly.setAttribute('points', pts);
+      svg.appendChild(poly);
+    });
+    (icon.lines || []).forEach(l => {
+      const line = document.createElementNS(NS, 'line');
+      line.setAttribute('x1', String(l.x1));
+      line.setAttribute('y1', String(l.y1));
+      line.setAttribute('x2', String(l.x2));
+      line.setAttribute('y2', String(l.y2));
+      svg.appendChild(line);
+    });
+    return svg;
+  }
+
+  // ── Utility: Focus trap for modals (accessibility) ──
+  function trapFocus(overlayEl) {
+    const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+    overlayEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        // Find and click the close button or cancel
+        const closeBtn = overlayEl.querySelector('.gpm-close-btn') || overlayEl.querySelector('.gpm-btn-ghost');
+        if (closeBtn) closeBtn.click();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const focusable = Array.from(overlayEl.querySelectorAll(focusableSelector)).filter(el => !el.disabled && el.offsetParent !== null);
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey) {
+        if (document.activeElement === first || overlayEl.shadowRoot?.activeElement === first) { e.preventDefault(); last.focus(); }
+      } else {
+        if (document.activeElement === last || overlayEl.shadowRoot?.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    });
+  }
+
   // ── Utility: Create element shorthand ──
   function el(tag, attrs = {}, children = []) {
     const elem = document.createElement(tag);
     for (const [key, val] of Object.entries(attrs)) {
       if (key === 'className') elem.className = val;
       else if (key === 'textContent') elem.textContent = val;
-      else if (key === 'innerHTML') elem.innerHTML = val;
+      // innerHTML intentionally removed for XSS safety — use createSVGIcon() instead
+      else if (key === 'innerHTML') { /* BLOCKED: use children with createSVGIcon() */ }
       else if (key.startsWith('on')) elem.addEventListener(key.slice(2).toLowerCase(), val);
       else if (key === 'style' && typeof val === 'object') Object.assign(elem.style, val);
       else elem.setAttribute(key, val);
@@ -81,20 +146,20 @@ const GPMUI = (() => {
 
     // ── Header: Title + Close button ──
     const headerRow = el('div', {
-      style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }
+      className: 'gpm-modal-header'
     }, [
-      el('div', { style: { fontSize: '18px', fontWeight: '400', color: 'var(--gpm-text)' }, textContent: title }),
+      el('div', { className: 'gpm-modal-title', textContent: title }),
       el('button', {
         type: 'button',
         textContent: '✕',
-        style: { background: 'none', border: 'none', color: 'var(--gpm-text-secondary)', fontSize: '18px', cursor: 'pointer', padding: '4px 8px', borderRadius: '50%' },
+        className: 'gpm-close-btn',
         onClick: () => { overlay.remove(); onCancel?.(); }
       })
     ]);
 
     // ── Name input with icon preview ──
     const iconPreview = el('span', {
-      style: { fontSize: '20px', flexShrink: '0', width: '32px', textAlign: 'center' },
+      className: 'gpm-icon-preview',
       textContent: selectedIcon
     });
 
@@ -162,7 +227,7 @@ const GPMUI = (() => {
 
     // Category chips (right side)
     const chipContainer = el('div', {
-      style: { display: 'flex', flexWrap: 'wrap', gap: '6px', alignContent: 'flex-start', flex: '1' }
+      className: 'gpm-chip-container'
     });
 
     CATEGORIES.forEach(cat => {
@@ -188,6 +253,8 @@ const GPMUI = (() => {
             b.style.border = isMatch ? '2px solid var(--gpm-accent)' : '1px solid var(--gpm-border)';
             b.style.background = isMatch ? 'rgba(138,180,248,0.1)' : 'transparent';
           });
+          // Update color grid selection
+          updateColorSelection(cat.color);
         }
       }, [
         el('span', { textContent: cat.icon, style: { fontSize: '14px' } }),
@@ -201,8 +268,31 @@ const GPMUI = (() => {
 
     contentRow.append(iconGrid, chipContainer);
 
+    // ── Color palette ──
+    const colorLabel = el('div', { className: 'gpm-label', textContent: t('selectColor'), style: { marginBottom: '8px' } });
+    const colorGrid = el('div', { className: 'gpm-color-grid' });
+
+    function updateColorSelection(color) {
+      selectedColor = color;
+      colorGrid.querySelectorAll('.gpm-color-swatch').forEach(sw => {
+        sw.classList.toggle('gpm-selected', sw.dataset.color === color);
+      });
+    }
+
+    COLORS.forEach(color => {
+      const swatch = el('div', {
+        className: `gpm-color-swatch${color === selectedColor ? ' gpm-selected' : ''}`,
+        style: { background: color },
+        'data-color': color,
+        onClick: () => updateColorSelection(color)
+      });
+      colorGrid.appendChild(swatch);
+    });
+
+    const colorSection = el('div', { style: { marginBottom: '20px' } }, [colorLabel, colorGrid]);
+
     // ── Create button ──
-    const footer = el('div', { style: { display: 'flex', justifyContent: 'flex-end' } }, [
+    const footer = el('div', { className: 'gpm-flex-end' }, [
       el('button', {
         type: 'button',
         textContent: existing ? t('save') : t('createProject'),
@@ -220,7 +310,7 @@ const GPMUI = (() => {
     ]);
 
     const modal = el('div', { className: 'gpm-modal', style: { width: '520px', padding: '24px' } }, [
-      headerRow, inputRow, contentRow, footer
+      headerRow, inputRow, contentRow, colorSection, footer
     ]);
 
     overlay.appendChild(modal);
@@ -228,6 +318,10 @@ const GPMUI = (() => {
       if (e.target === overlay) { overlay.remove(); onCancel?.(); }
     });
 
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', title);
+    trapFocus(overlay);
     shadowRoot.appendChild(overlay);
     setTimeout(() => nameInput.focus(), 50);
     return overlay;
@@ -240,7 +334,7 @@ const GPMUI = (() => {
     // Remove any existing context menu
     shadowRoot.querySelectorAll('.gpm-context-menu').forEach(m => m.remove());
 
-    const menu = el('div', { className: 'gpm-context-menu', style: { left: x + 'px', top: y + 'px' } });
+    const menu = el('div', { className: 'gpm-context-menu', role: 'menu', style: { left: x + 'px', top: y + 'px' } });
 
     items.forEach(item => {
       if (item.divider) {
@@ -259,7 +353,7 @@ const GPMUI = (() => {
           el('span', { textContent: '▸', style: { marginLeft: 'auto', fontSize: '10px' } })
         ]);
 
-        const subList = el('div', { className: 'gpm-context-submenu-list', style: { display: 'none' } });
+        const subList = el('div', { className: 'gpm-context-submenu-list gpm-hidden-input' });
         item.submenu.forEach(sub => {
           subList.appendChild(el('button', {
             className: 'gpm-context-item',
@@ -291,11 +385,18 @@ const GPMUI = (() => {
       menu.appendChild(btn);
     });
 
-    // Reposition if overflowing viewport
+    // Reposition if overflowing viewport — use viewport coordinates directly
+    // (Shadow DOM host has width:0/height:0 so getBoundingClientRect may be unreliable)
     shadowRoot.appendChild(menu);
-    const rect = menu.getBoundingClientRect();
-    if (rect.right > window.innerWidth) menu.style.left = (x - rect.width) + 'px';
-    if (rect.bottom > window.innerHeight) menu.style.top = (y - rect.height) + 'px';
+    // Force layout so we can measure the menu dimensions
+    const menuWidth = menu.offsetWidth || 180;
+    const menuHeight = menu.offsetHeight || 200;
+    let finalX = x;
+    let finalY = y;
+    if (finalX + menuWidth > window.innerWidth) finalX = Math.max(0, x - menuWidth);
+    if (finalY + menuHeight > window.innerHeight) finalY = Math.max(0, y - menuHeight);
+    menu.style.left = finalX + 'px';
+    menu.style.top = finalY + 'px';
 
     // Close on outside click
     const closeHandler = (e) => {
@@ -314,201 +415,9 @@ const GPMUI = (() => {
   }
 
   // ══════════════════════════════════════
-  //  PROJECT TREE NODE (Recursive)
-  // ══════════════════════════════════════
-  function createTreeNode(shadowRoot, { project, allProjects, chatMap, onAction, depth = 0 }) {
-    const children = allProjects.filter(p => p.parentId === project.id);
-    const chatIds = project.chatIds || [];
-    const totalCount = chatIds.length + children.reduce((sum, c) => sum + (c.chatIds?.length || 0), 0);
-
-    const item = el('li', { className: 'gpm-tree-item' });
-    item.dataset.projectId = project.id;
-
-    // Row
-    const row = el('div', { className: 'gpm-tree-row' });
-
-    // Chevron (only if has children or chats)
-    const hasContent = children.length > 0 || chatIds.length > 0;
-    const chevron = el('span', {
-      className: `gpm-tree-chevron${!project.collapsed ? ' gpm-expanded' : ''}`,
-      textContent: hasContent ? '▶' : '',
-      onClick: (e) => {
-        e.stopPropagation();
-        if (!hasContent) return;
-        project.collapsed = !project.collapsed;
-        onAction('toggle', project);
-      }
-    });
-
-    const icon = el('span', {
-      className: 'gpm-tree-icon',
-      textContent: project.icon,
-      style: { filter: `drop-shadow(0 0 1px ${project.color})` }
-    });
-
-    const label = el('span', {
-      className: 'gpm-tree-label',
-      textContent: project.name,
-      style: { color: project.color }
-    });
-
-    const count = el('span', {
-      className: 'gpm-tree-count',
-      textContent: totalCount > 0 ? `${totalCount}` : ''
-    });
-
-    row.append(chevron, icon, label, count);
-
-    // Drag & Drop target
-    row.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      row.classList.add('gpm-drag-over');
-    });
-    row.addEventListener('dragleave', () => row.classList.remove('gpm-drag-over'));
-    row.addEventListener('drop', (e) => {
-      e.preventDefault();
-      row.classList.remove('gpm-drag-over');
-      const chatId = e.dataTransfer.getData('text/gpm-chat-id');
-      if (chatId) onAction('dropChat', { projectId: project.id, chatId });
-    });
-
-    // Right-click context menu
-    row.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-
-      // Build "Move to Project" submenu from all projects
-      const moveSubmenu = allProjects
-        .filter(p => p.id !== project.id)
-        .map(p => ({
-          icon: p.icon,
-          label: p.name,
-          action: () => onAction('moveProject', { fromId: project.id, toId: p.id })
-        }));
-
-      showContextMenu(shadowRoot, {
-        x: e.clientX, y: e.clientY,
-        items: [
-          { icon: '💬', label: t('newChatInProject'), action: () => onAction('newChat', project) },
-          { icon: '📂', label: t('createSubfolder'), action: () => onAction('createSubfolder', project) },
-          { divider: true },
-          { icon: '✏️', label: t('rename'), action: () => onAction('edit', project) },
-          { icon: '🎨', label: t('editColor'), action: () => onAction('edit', project) },
-          { icon: '🔄', label: t('changeIcon'), action: () => onAction('edit', project) },
-          { divider: true },
-          { icon: '🗑️', label: t('delete'), danger: true, action: () => onAction('delete', project) }
-        ]
-      });
-    });
-
-    // Click to expand/collapse
-    row.addEventListener('click', () => {
-      if (hasContent) {
-        project.collapsed = !project.collapsed;
-        onAction('toggle', project);
-      }
-    });
-
-    item.appendChild(row);
-
-    // Children container
-    if (hasContent && !project.collapsed) {
-      const childList = el('ul', { className: 'gpm-tree-children' });
-
-      // Pinned chats first, then regular
-      const sortedChatIds = [...chatIds].sort((a, b) => {
-        const aPinned = chatMap[a]?.pinned ? 0 : 1;
-        const bPinned = chatMap[b]?.pinned ? 0 : 1;
-        return aPinned - bPinned;
-      });
-
-      sortedChatIds.forEach(chatId => {
-        const mapping = chatMap[chatId];
-        const chatItem = createChatItem(shadowRoot, {
-          chatId, mapping, project, allProjects, onAction
-        });
-        childList.appendChild(chatItem);
-      });
-
-      children.forEach(child => {
-        const childNode = createTreeNode(shadowRoot, {
-          project: child, allProjects, chatMap, onAction, depth: depth + 1
-        });
-        childList.appendChild(childNode);
-      });
-
-      item.appendChild(childList);
-    }
-
-    return item;
-  }
-
-  // ══════════════════════════════════════
-  //  CHAT ITEM (inside project tree)
-  // ══════════════════════════════════════
-  function createChatItem(shadowRoot, { chatId, mapping, project, allProjects, onAction }) {
-    const alias = mapping?.alias || chatId;
-    const pinned = mapping?.pinned || false;
-
-    const item = el('div', {
-      className: `gpm-chat-item${pinned ? ' gpm-pinned' : ''}`,
-      draggable: 'true'
-    });
-
-    item.addEventListener('dragstart', (e) => {
-      e.dataTransfer.setData('text/gpm-chat-id', chatId);
-      item.classList.add('gpm-dragging');
-    });
-    item.addEventListener('dragend', () => item.classList.remove('gpm-dragging'));
-
-    const dot = el('span', {
-      className: 'gpm-chat-dot',
-      style: { background: project.color }
-    });
-
-    const label = el('span', {
-      className: 'gpm-chat-label',
-      textContent: alias
-    });
-
-    item.append(dot, label);
-
-    // Click to navigate to chat
-    item.addEventListener('click', () => {
-      onAction('openChat', chatId);
-    });
-
-    // Right-click context menu for chat
-    item.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-
-      const moveSubmenu = allProjects.map(p => ({
-        icon: p.icon,
-        label: p.name,
-        action: () => onAction('moveChatToProject', { chatId, projectId: p.id })
-      }));
-
-      showContextMenu(shadowRoot, {
-        x: e.clientX, y: e.clientY,
-        items: [
-          { icon: pinned ? '📌' : '📍', label: pinned ? t('unpinChat') : t('pinChat'), action: () => onAction('togglePin', chatId) },
-          { icon: '✏️', label: t('renameChat'), action: () => onAction('renameChat', chatId) },
-          { icon: '📂', label: t('moveToProject'), submenu: moveSubmenu },
-          { divider: true },
-          { icon: '🗑️', label: t('removeFromProject'), danger: true, action: () => onAction('unassignChat', chatId) }
-        ]
-      });
-    });
-
-    return item;
-  }
-
-  // ══════════════════════════════════════
   //  QUICK PROMPTS PANEL
   // ══════════════════════════════════════
-  function createQuickPromptsPanel(shadowRoot, { prompts, onSelect, onAdd, onEdit, onClose, onBackup, onRestore }) {
+  function createQuickPromptsPanel(shadowRoot, { prompts, onSelect, onAdd, onEdit, onDelete, onClose, onBackup, onRestore }) {
     const panel = el('div', { className: 'gpm-quick-prompts' });
 
     // ── Header with title + close ──
@@ -536,7 +445,7 @@ const GPMUI = (() => {
     const listContainer = el('div', { className: 'gpm-qp-list' });
 
     function renderPrompts(filter = '') {
-      listContainer.innerHTML = '';
+      while (listContainer.firstChild) listContainer.removeChild(listContainer.firstChild);
       const filtered = filter
         ? prompts.filter(p => p.title.toLowerCase().includes(filter) || p.content.toLowerCase().includes(filter))
         : prompts;
@@ -560,11 +469,18 @@ const GPMUI = (() => {
         const editBtn = el('button', {
           className: 'gpm-qp-card-edit',
           type: 'button',
-          innerHTML: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+          title: t('editPrompt'),
           onClick: (e) => { e.stopPropagation(); onEdit(prompt); }
-        });
+        }, [createSVGIcon('edit', 14)]);
 
-        card.append(textCol, editBtn);
+        const deleteBtn = el('button', {
+          className: 'gpm-qp-card-delete',
+          type: 'button',
+          title: t('delete'),
+          onClick: (e) => { e.stopPropagation(); onDelete(prompt); }
+        }, [createSVGIcon('trash', 14)]);
+
+        card.append(textCol, editBtn, deleteBtn);
         listContainer.appendChild(card);
       });
     }
@@ -579,16 +495,14 @@ const GPMUI = (() => {
         className: 'gpm-qp-footer-btn',
         type: 'button',
         title: t('backup'),
-        innerHTML: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
         onClick: onBackup
-      }),
+      }, [createSVGIcon('download', 16)]),
       el('button', {
         className: 'gpm-qp-footer-btn',
         type: 'button',
         title: t('restore'),
-        innerHTML: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>',
         onClick: onRestore
-      }),
+      }, [createSVGIcon('upload', 16)]),
       el('button', {
         className: 'gpm-qp-fab',
         type: 'button',
@@ -614,13 +528,13 @@ const GPMUI = (() => {
     // ── Header: Title + Close ──
     const isEdit = !!existing;
     const headerRow = el('div', {
-      style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }
+      className: 'gpm-modal-header'
     }, [
-      el('div', { style: { fontSize: '18px', fontWeight: '400', color: 'var(--gpm-text)' }, textContent: isEdit ? t('editPrompt') : t('newPrompt') }),
+      el('div', { className: 'gpm-modal-title', textContent: isEdit ? t('editPrompt') : t('newPrompt') }),
       el('button', {
         type: 'button',
         textContent: '✕',
-        style: { background: 'none', border: 'none', color: 'var(--gpm-text-secondary)', fontSize: '18px', cursor: 'pointer', padding: '4px 8px', borderRadius: '50%' },
+        className: 'gpm-close-btn',
         onClick: () => { overlay.remove(); onCancel?.(); }
       })
     ]);
@@ -643,7 +557,7 @@ const GPMUI = (() => {
 
     // ── Token count ──
     const tokenDisplay = el('div', {
-      style: { fontSize: '11px', color: 'var(--gpm-text-secondary)', textAlign: 'right', marginTop: '4px' },
+      className: 'gpm-token-display',
       textContent: `~${Math.ceil(contentVal.length / 4)} tokens`
     });
 
@@ -671,6 +585,10 @@ const GPMUI = (() => {
     ]);
 
     overlay.appendChild(modal);
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', isEdit ? t('editPrompt') : t('newPrompt'));
+    trapFocus(overlay);
     overlay.addEventListener('click', (e) => { if (e.target === overlay) { overlay.remove(); onCancel?.(); } });
     shadowRoot.appendChild(overlay);
     setTimeout(() => nameInput.focus(), 50);
@@ -684,23 +602,16 @@ const GPMUI = (() => {
     let lang = settings.lang || 'en';
     const overlay = el('div', { className: 'gpm-overlay' });
 
-    const langSelect = el('select', { className: 'gpm-select' }, [
-      el('option', { value: 'en', textContent: 'English' }),
-      el('option', { value: 'tr', textContent: 'Türkçe' }),
-      el('option', { value: 'de', textContent: 'Deutsch' }),
-      el('option', { value: 'fr', textContent: 'Français' }),
-      el('option', { value: 'es', textContent: 'Español' }),
-      el('option', { value: 'it', textContent: 'Italiano' }),
-      el('option', { value: 'pt', textContent: 'Português' }),
-      el('option', { value: 'ru', textContent: 'Русский' }),
-      el('option', { value: 'ja', textContent: '日本語' }),
-      el('option', { value: 'zh', textContent: '中文' })
-    ]);
+    const langSelect = el('select', { className: 'gpm-select' },
+      getLanguageOptions().map(opt =>
+        el('option', { value: opt.code, textContent: opt.displayName })
+      )
+    );
     langSelect.value = lang;
     langSelect.addEventListener('change', () => { lang = langSelect.value; });
 
     // Hidden file input for import
-    const fileInput = el('input', { type: 'file', accept: '.json', style: { display: 'none' } });
+    const fileInput = el('input', { type: 'file', accept: '.json', className: 'gpm-hidden-input' });
     fileInput.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;
@@ -746,15 +657,29 @@ const GPMUI = (() => {
             className: 'gpm-btn gpm-btn-ghost', textContent: backupLabel, type: 'button',
             style: { justifyContent: 'flex-start', opacity: backupInfo ? '1' : '0.5' },
             onClick: () => {
-              if (!backupInfo) { alert(t('noBackupAvailable')); return; }
-              if (confirm(t('restoreConfirm'))) { onRestoreBackup?.(); overlay.remove(); }
+              if (!backupInfo) {
+                showAlertDialog(shadowRoot, { title: t('restoreBackup'), message: t('noBackupAvailable') });
+                return;
+              }
+              showConfirmDialog(shadowRoot, {
+                title: t('restoreBackup'),
+                message: t('restoreConfirm'),
+                confirmText: t('restoreBackup'),
+                onConfirm: () => { onRestoreBackup?.(); overlay.remove(); }
+              });
             }
           }),
           el('button', {
             className: 'gpm-btn gpm-btn-danger', textContent: t('clearData'), type: 'button',
             style: { justifyContent: 'flex-start' },
             onClick: () => {
-              if (confirm(t('clearConfirm'))) { onClear(); overlay.remove(); }
+              showConfirmDialog(shadowRoot, {
+                title: t('clearData'),
+                message: t('clearConfirm'),
+                confirmText: t('clearData'),
+                danger: true,
+                onConfirm: () => { onClear(); overlay.remove(); }
+              });
             }
           })
         ])
@@ -773,6 +698,10 @@ const GPMUI = (() => {
     ]);
 
     overlay.appendChild(modal);
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', t('settings'));
+    trapFocus(overlay);
     overlay.addEventListener('click', (e) => { if (e.target === overlay) { overlay.remove(); onCancel?.(); } });
     shadowRoot.appendChild(overlay);
     return overlay;
@@ -804,21 +733,117 @@ const GPMUI = (() => {
     ]);
 
     overlay.appendChild(modal);
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', t('renameChat'));
+    trapFocus(overlay);
     overlay.addEventListener('click', (e) => { if (e.target === overlay) { overlay.remove(); onCancel?.(); } });
     shadowRoot.appendChild(overlay);
     setTimeout(() => { input.focus(); input.select(); }, 50);
     return overlay;
   }
 
+  // ══════════════════════════════════════
+  //  CONFIRM / ALERT DIALOGS (safe replacement for native confirm/alert)
+  // ══════════════════════════════════════
+
+  function showConfirmDialog(shadowRoot, { title, message, confirmText, cancelText, onConfirm, onCancel, danger = false }) {
+    const overlay = el('div', { className: 'gpm-overlay' });
+
+    const headerRow = el('div', {
+      className: 'gpm-modal-header-sm'
+    }, [
+      el('div', { className: 'gpm-modal-title', textContent: title || t('confirm') }),
+      el('button', {
+        type: 'button',
+        textContent: '✕',
+        className: 'gpm-close-btn',
+        onClick: () => { overlay.remove(); onCancel?.(); }
+      })
+    ]);
+
+    const messageEl = el('div', {
+      className: 'gpm-modal-message',
+      textContent: message
+    });
+
+    const footer = el('div', { className: 'gpm-btn-row' }, [
+      el('button', {
+        className: 'gpm-btn gpm-btn-ghost', textContent: cancelText || t('cancel'), type: 'button',
+        onClick: () => { overlay.remove(); onCancel?.(); }
+      }),
+      el('button', {
+        className: danger ? 'gpm-btn gpm-btn-danger' : 'gpm-btn gpm-btn-primary',
+        textContent: confirmText || t('confirm'), type: 'button',
+        onClick: () => { overlay.remove(); onConfirm?.(); }
+      })
+    ]);
+
+    const modal = el('div', { className: 'gpm-modal', style: { width: '380px', padding: '24px' } }, [
+      headerRow, messageEl, footer
+    ]);
+
+    overlay.appendChild(modal);
+    overlay.setAttribute('role', 'alertdialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', title || t('confirm'));
+    trapFocus(overlay);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) { overlay.remove(); onCancel?.(); } });
+    shadowRoot.appendChild(overlay);
+    return overlay;
+  }
+
+  function showAlertDialog(shadowRoot, { title, message, buttonText, onClose }) {
+    const overlay = el('div', { className: 'gpm-overlay' });
+
+    const headerRow = el('div', {
+      className: 'gpm-modal-header-sm'
+    }, [
+      el('div', { className: 'gpm-modal-title', textContent: title || t('info') }),
+      el('button', {
+        type: 'button',
+        textContent: '✕',
+        className: 'gpm-close-btn',
+        onClick: () => { overlay.remove(); onClose?.(); }
+      })
+    ]);
+
+    const messageEl = el('div', {
+      className: 'gpm-modal-message',
+      textContent: message
+    });
+
+    const footer = el('div', { className: 'gpm-flex-end' }, [
+      el('button', {
+        className: 'gpm-btn gpm-btn-primary', textContent: buttonText || 'OK', type: 'button',
+        onClick: () => { overlay.remove(); onClose?.(); }
+      })
+    ]);
+
+    const modal = el('div', { className: 'gpm-modal', style: { width: '380px', padding: '24px' } }, [
+      headerRow, messageEl, footer
+    ]);
+
+    overlay.appendChild(modal);
+    overlay.setAttribute('role', 'alertdialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', title || t('info'));
+    trapFocus(overlay);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) { overlay.remove(); onClose?.(); } });
+    shadowRoot.appendChild(overlay);
+    return overlay;
+  }
+
   return {
     createProjectModal,
     showContextMenu,
-    createTreeNode,
-    createChatItem,
     createQuickPromptsPanel,
     createQuickPromptModal,
     createSettingsModal,
     createRenameModal,
+    showConfirmDialog,
+    showAlertDialog,
+    createSVGIcon,
     COLORS,
     PROJECT_ICONS,
     CATEGORIES
