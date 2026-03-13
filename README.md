@@ -118,13 +118,10 @@ All data is stored locally in your browser. No data is sent to external servers.
 
 ## Changelog
 
-### v1.1.0 — Data Safety Update
-- 🐛 **Fixed:** Critical bug where chats assigned to projects would randomly disappear due to false-positive cleanup triggered by Gemini's lazy-loading sidebar
-- 🛡️ **Added:** Auto-backup before every save — your data is always protected
-- 🛡️ **Added:** "Restore from Backup" button in Settings with timestamp and content preview
-- 🛡️ **Added:** Mutex-based write serialization prevents data corruption across multiple tabs
-- ⚡ **Improved:** Cross-tab sync debounced (300ms) for smoother multi-tab experience
-- 🗑️ **Removed:** Aggressive auto-cleanup that incorrectly removed chats not visible in sidebar DOM
+### v1.2.1 — Deleted Chat Sync Fix
+- 🐛 **Fixed:** Chats deleted from Gemini's native interface now automatically disappear from GPM project folders — no more ghost entries
+- 🛡️ **Added:** Two-phase deletion verification with debounce prevents false positives from Gemini's lazy-loading or DOM recycling
+- 🛡️ **Added:** Safety guard skips cleanup when sidebar is still loading (zero chat links detected)
 
 ### v1.2.0 — DOM Resilience & Language Expansion Update
 - 🔍 **Added:** Search bar in Projects sidebar — quickly filter and find chats across all projects
@@ -136,9 +133,17 @@ All data is stored locally in your browser. No data is sent to external servers.
 - 🐛 **Fixed:** MutationObserver and interval check suppressed by floating button presence — both now continue retrying until toolbar placement succeeds
 - ⚡ **Improved:** Quick Prompt button toolbar discovery walks up from "Tools" label to find proper toolbar row container
 - ⚡ **Improved:** MutationObserver uses content-based detection ("Tools" label in 17 languages) to trigger toolbar injection
-- 🌍 **Added:** 8 new languages: Arabic (العربية), Bengali (বাংলা), Hindi (हिন्दी), Indonesian (Bahasa Indonesia), Korean (한국어), Portuguese (Português), Thai (ไทย), Vietnamese (Tiếng Việt)
+- 🌍 **Added:** 8 new languages: Arabic (العربية), Bengali (বাংলা), Hindi (हिन्दी), Indonesian (Bahasa Indonesia), Korean (한국어), Portuguese (Português), Thai (ไทย), Vietnamese (Tiếng Việt)
 - 🐛 **Fixed:** Data import now correctly preserves Hindi, Korean, and Arabic language preferences
 - 📊 Expanded from 9 → 17 languages total
+
+### v1.1.0 — Data Safety Update
+- 🐛 **Fixed:** Critical bug where chats assigned to projects would randomly disappear due to false-positive cleanup triggered by Gemini's lazy-loading sidebar
+- 🛡️ **Added:** Auto-backup before every save — your data is always protected
+- 🛡️ **Added:** "Restore from Backup" button in Settings with timestamp and content preview
+- 🛡️ **Added:** Mutex-based write serialization prevents data corruption across multiple tabs
+- ⚡ **Improved:** Cross-tab sync debounced (300ms) for smoother multi-tab experience
+- 🗑️ **Removed:** Aggressive auto-cleanup that incorrectly removed chats not visible in sidebar DOM
 
 ### v1.0.0 — Initial Release
 - Project and subfolder creation with custom icons and colors

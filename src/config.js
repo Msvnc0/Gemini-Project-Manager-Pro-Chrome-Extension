@@ -28,6 +28,7 @@ const GPM_CONFIG = {
   HEALTH_CHECK_INTERVAL: 5000,  // DOM health check every 5 seconds
   REINIT_DEBOUNCE: 1000,        // Debounce for re-initialization attempts
   MAX_REINIT_FAILURES: 3,       // Max consecutive re-init failures before backing off
+  DELETION_CHECK_DEBOUNCE: 2000,  // Debounce for deleted chat detection (ms)
   DEBUG: false  // Set to true to enable console logging
 };
 
@@ -58,7 +59,9 @@ const GPM_STATE = {
   reinitDebounceTimer: null,    // Re-initialization debounce timer
   reinitFailCount: 0,           // Consecutive re-init failure counter
   _qpCheckInterval: null,       // Quick Prompt button check interval ID
-  _qpMutationObserver: null     // Quick Prompt button MutationObserver instance
+  _qpMutationObserver: null,    // Quick Prompt button MutationObserver instance
+  _deletionCheckTimer: null,    // Deleted chat detection debounce timer
+  _pendingDeletedChatIds: null  // Set of chat IDs pending deletion verification
 };
 
 /**
@@ -73,6 +76,7 @@ function gpmResetState() {
   clearTimeout(GPM_STATE.aliasResolveTimer);
   clearTimeout(GPM_STATE.syncTimeout);
   clearTimeout(GPM_STATE.reinitDebounceTimer);
+  clearTimeout(GPM_STATE._deletionCheckTimer);
 
   // Clear Quick Prompt button monitor (interval + observer)
   if (GPM_STATE._qpCheckInterval) {
@@ -105,6 +109,8 @@ function gpmResetState() {
   GPM_STATE.aliasResolveTimer = null;
   GPM_STATE.syncTimeout = null;
   GPM_STATE.reinitDebounceTimer = null;
+  GPM_STATE._deletionCheckTimer = null;
+  GPM_STATE._pendingDeletedChatIds = null;
 
   // NOTE: pendingChatAssignment is intentionally preserved
   // NOTE: healthCheckTimer is NOT cleared here — the caller manages it

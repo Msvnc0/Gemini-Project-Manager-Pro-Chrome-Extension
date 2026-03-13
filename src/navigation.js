@@ -9,6 +9,7 @@
  *   - gpmOnNavigate()            — Handle navigation events
  *   - gpmObserveNewChats()       — Unified polling + chat observer
  *   - gpmEnhanceNativeChatItems() — Make native chat items draggable
+ *   - gpmDetectDeletedChats()    — Detect chats deleted from Gemini's native sidebar
  *
  * Dependencies (globals from earlier scripts):
  *   - GPM_CONFIG, GPM_STATE, gpmLog, gpmWarn, gpmError, gpmIsContextValid, extractChatIdFromUrl (config.js)
@@ -112,6 +113,121 @@ function gpmOnNavigate() {
 }
 
 // ══════════════════════════════════════
+//  DELETED CHAT DETECTION
+// ══════════════════════════════════════
+
+/**
+ * Detect chats that have been deleted from Gemini's native sidebar and
+ * remove them from GPM's storage (projects.chatIds + chatMap).
+ *
+ * Strategy:
+ *   1. Collect all chat IDs currently visible in the sidebar DOM
+ *   2. Compare against all chat IDs stored in GPM's projects
+ *   3. If a stored chat ID is missing from the DOM, it may be deleted
+ *   4. Use a two-phase verification: first mutation marks candidates,
+ *      debounced check verifies they're still missing after stabilization
+ *
+ * This avoids false positives from Gemini lazy-loading or DOM recycling.
+ */
+function gpmDetectDeletedChats() {
+  // Debounce: wait for sidebar DOM to stabilize before checking
+  clearTimeout(GPM_STATE._deletionCheckTimer);
+  GPM_STATE._deletionCheckTimer = setTimeout(async () => {
+    if (!gpmIsContextValid()) return;
+
+    const sidebar = document.querySelector(GPM_SELECTORS.sidebar);
+    if (!sidebar) return;
+
+    // ── Step 1: Collect all chat IDs visible in the sidebar DOM ──
+    const sidebarLinks = sidebar.querySelectorAll('a[href^="/app/"]');
+    const domChatIds = new Set();
+    for (const link of sidebarLinks) {
+      const href = link.getAttribute('href') || '';
+      const cid = extractChatIdFromUrl(href);
+      if (cid) domChatIds.add(cid);
+    }
+
+    // If sidebar has NO chat links at all, Gemini may still be loading — skip
+    // (prevents false mass-deletion when sidebar is in transition)
+    if (domChatIds.size === 0) {
+      gpmLog('Deletion check: No chat links in sidebar, skipping (may be loading)');
+      return;
+    }
+
+    // ── Step 2: Load stored data ──
+    const projects = await GPMStorage.getProjects();
+    const chatMap = await GPMStorage.getChatMap();
+
+    // Collect all stored chat IDs across all projects
+    const storedChatIds = new Set();
+    for (const project of projects) {
+      for (const cid of (project.chatIds || [])) {
+        storedChatIds.add(cid);
+      }
+    }
+
+    // ── Step 3: Find orphaned chat IDs (in storage but not in DOM) ──
+    const orphanedIds = [];
+    for (const cid of storedChatIds) {
+      if (!domChatIds.has(cid)) {
+        orphanedIds.push(cid);
+      }
+    }
+
+    if (orphanedIds.length === 0) return;
+
+    // ── Step 4: Two-phase verification ──
+    // If this is the first detection, store candidates and wait for next check
+    if (!GPM_STATE._pendingDeletedChatIds) {
+      GPM_STATE._pendingDeletedChatIds = new Set(orphanedIds);
+      gpmLog('Deletion check: Candidates for removal (pending verification):', orphanedIds);
+      // Schedule a second check after another debounce period
+      GPM_STATE._deletionCheckTimer = setTimeout(() => {
+        gpmDetectDeletedChats();
+      }, GPM_CONFIG.DELETION_CHECK_DEBOUNCE);
+      return;
+    }
+
+    // Second pass: only remove IDs that were orphaned in BOTH checks
+    const confirmedDeleted = orphanedIds.filter(cid => GPM_STATE._pendingDeletedChatIds.has(cid));
+    GPM_STATE._pendingDeletedChatIds = null; // Reset for next cycle
+
+    if (confirmedDeleted.length === 0) {
+      gpmLog('Deletion check: No confirmed deletions after verification');
+      return;
+    }
+
+    gpmLog('Deletion check: Confirmed deleted chats:', confirmedDeleted);
+
+    // ── Step 5: Remove confirmed orphaned chats from storage ──
+    let storageUpdated = false;
+    const confirmedSet = new Set(confirmedDeleted);
+
+    for (const project of projects) {
+      const before = (project.chatIds || []).length;
+      project.chatIds = (project.chatIds || []).filter(cid => !confirmedSet.has(cid));
+      if (project.chatIds.length !== before) {
+        storageUpdated = true;
+      }
+    }
+
+    for (const cid of confirmedDeleted) {
+      if (chatMap[cid]) {
+        delete chatMap[cid];
+        storageUpdated = true;
+      }
+    }
+
+    if (storageUpdated) {
+      await GPMStorage.saveProjects(projects);
+      await GPMStorage.saveChatMap(chatMap);
+      gpmLog('Deletion check: Removed', confirmedDeleted.length, 'deleted chat(s) from storage');
+      gpmRenderTree();
+    }
+  }, GPM_CONFIG.DELETION_CHECK_DEBOUNCE);
+}
+
+// ══════════════════════════════════════
 //  NEW CHAT OBSERVER (Unified Polling)
 // ══════════════════════════════════════
 
@@ -195,7 +311,7 @@ function gpmObserveNewChats() {
     gpmStartPolling();
   }
 
-  // Enhance native chat items for drag & drop
+  // Enhance native chat items for drag & drop + detect deleted chats
   // Optimized: observe only chat list changes, filter out GPM's own mutations (PERF-004)
   const sidebar = document.querySelector(GPM_SELECTORS.sidebar);
   if (sidebar) {
@@ -215,6 +331,13 @@ function gpmObserveNewChats() {
       enhanceTimeout = setTimeout(() => {
         gpmEnhanceNativeChatItems();
       }, GPM_CONFIG.ENHANCE_DEBOUNCE);
+
+      // ── Trigger deleted chat detection on sidebar DOM changes ──
+      // Check if any nodes were REMOVED (potential chat deletion)
+      const hasRemovals = mutations.some(m => m.removedNodes.length > 0);
+      if (hasRemovals) {
+        gpmDetectDeletedChats();
+      }
     }).observe(sidebar, { childList: true, subtree: true });
     gpmEnhanceNativeChatItems();
   }
