@@ -112,10 +112,23 @@ async function gpmRenderTree() {
   gear.setAttribute('tabindex', '0');
   gear.setAttribute('aria-label', t('settings'));
   gear.style.cssText = 'cursor:pointer;font-size:14px;opacity:0;transition:opacity 150ms;padding:2px 4px;';
-  gear.addEventListener('click', (e) => { e.stopPropagation(); gpmShowSettingsModal(); });
-  gear.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); gpmShowSettingsModal(); } });
-  header.addEventListener('mouseenter', () => { gear.style.opacity = '0.6'; });
-  header.addEventListener('mouseleave', () => { gear.style.opacity = '0'; });
+  gear.addEventListener('click', (e) => {
+    e.stopPropagation();
+    gpmShowSettingsModal();
+  });
+  gear.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      e.stopPropagation();
+      gpmShowSettingsModal();
+    }
+  });
+  header.addEventListener('mouseenter', () => {
+    gear.style.opacity = '0.6';
+  });
+  header.addEventListener('mouseleave', () => {
+    gear.style.opacity = '0';
+  });
 
   header.append(chevron, title, gear);
   fragment.appendChild(header);
@@ -168,7 +181,12 @@ async function gpmRenderTree() {
     header.setAttribute('aria-expanded', String(!collapsed));
   };
   header.addEventListener('click', toggleCollapse);
-  header.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleCollapse(); } });
+  header.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      toggleCollapse();
+    }
+  });
 
   // ── Search filter helper (with match source tracking + cache for performance) ──
   const searchQuery = (GPM_STATE._searchQuery || '').toLowerCase();
@@ -196,7 +214,7 @@ async function gpmRenderTree() {
       }
     }
     // Check children recursively
-    const kids = projects.filter(p => p.parentId === project.id);
+    const kids = projects.filter((p) => p.parentId === project.id);
     for (const kid of kids) {
       if (projectMatchesSearch(kid, query).matches) {
         const result = { matches: true, source: 'child' };
@@ -230,7 +248,12 @@ async function gpmRenderTree() {
 
   newRow.append(newIcon, newLabel);
   newRow.addEventListener('click', () => gpmShowCreateProjectModal());
-  newRow.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); gpmShowCreateProjectModal(); } });
+  newRow.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      gpmShowCreateProjectModal();
+    }
+  });
   if (!searchQuery) list.appendChild(newRow);
 
   // ── Empty State (UX-002) ──
@@ -245,7 +268,7 @@ async function gpmRenderTree() {
   // ── Project Rows ── (sorted by order field, filtered by search)
   const sortedRootProjects = [...rootProjects].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   let matchCount = 0;
-  sortedRootProjects.forEach(project => {
+  sortedRootProjects.forEach((project) => {
     if (searchQuery && !projectMatchesSearch(project, searchQuery).matches) return;
     matchCount++;
     const row = gpmCreateProjectRow(project, projects, chatMap);
@@ -281,14 +304,18 @@ async function gpmRenderTree() {
       // Re-focus and restore cursor after render
       setTimeout(() => {
         const newInput = GPM_STATE.container?.querySelector('[data-gpm="search"]');
-        if (newInput) { newInput.focus(); newInput.selectionStart = newInput.selectionEnd = newInput.value.length; }
+        if (newInput) {
+          newInput.focus();
+          newInput.selectionStart = newInput.selectionEnd = newInput.value.length;
+        }
       }, 10);
     }, GPM_CONFIG.SYNC_DEBOUNCE);
   });
   // Clear search on Escape
   searchInput.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && searchInput.value) {
-      e.preventDefault(); e.stopPropagation();
+      e.preventDefault();
+      e.stopPropagation();
       GPM_STATE._searchQuery = '';
       searchInput.value = '';
       gpmRenderTree();
@@ -311,7 +338,7 @@ async function gpmRenderTree() {
 
 function gpmCreateProjectRow(project, allProjects, chatMap) {
   const frag = document.createDocumentFragment();
-  const children = allProjects.filter(p => p.parentId === project.id);
+  const children = allProjects.filter((p) => p.parentId === project.id);
   const chatIds = project.chatIds || [];
   const activeQuery = (GPM_STATE._searchQuery || '').toLowerCase();
 
@@ -365,7 +392,9 @@ function gpmCreateProjectRow(project, allProjects, chatMap) {
     e.dataTransfer.setData('text/gpm-project-parentid', project.parentId || '');
     row.style.opacity = '0.5';
   });
-  row.addEventListener('dragend', () => { row.style.opacity = ''; });
+  row.addEventListener('dragend', () => {
+    row.style.opacity = '';
+  });
 
   // Click to expand/collapse
   const hasContent = children.length > 0 || chatIds.length > 0;
@@ -381,14 +410,14 @@ function gpmCreateProjectRow(project, allProjects, chatMap) {
     if (project.collapsed && !forceExpand) subList.classList.add('gpm-hidden');
 
     // Child projects FIRST (subfolders above chats)
-    children.forEach(child => {
+    children.forEach((child) => {
       const childRow = gpmCreateProjectRow(child, allProjects, chatMap);
       subList.appendChild(childRow);
     });
 
     // Then chats (pinned first)
     const sorted = [...chatIds].sort((a, b) => (chatMap[b]?.pinned ? 1 : 0) - (chatMap[a]?.pinned ? 1 : 0));
-    sorted.forEach(chatId => {
+    sorted.forEach((chatId) => {
       const chatRow = gpmCreateChatRow(chatId, chatMap[chatId], project, allProjects);
       subList.appendChild(chatRow);
     });
@@ -404,9 +433,18 @@ function gpmCreateProjectRow(project, allProjects, chatMap) {
       toggleProject();
     });
     row.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleProject(); }
-      if (e.key === 'ArrowRight' && project.collapsed) { e.preventDefault(); toggleProject(); }
-      if (e.key === 'ArrowLeft' && !project.collapsed) { e.preventDefault(); toggleProject(); }
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleProject();
+      }
+      if (e.key === 'ArrowRight' && project.collapsed) {
+        e.preventDefault();
+        toggleProject();
+      }
+      if (e.key === 'ArrowLeft' && !project.collapsed) {
+        e.preventDefault();
+        toggleProject();
+      }
     });
   }
 
@@ -441,7 +479,7 @@ function gpmCreateProjectRow(project, allProjects, chatMap) {
     const droppedProjectId = e.dataTransfer.getData('text/gpm-project-id');
     if (droppedProjectId && droppedProjectId !== project.id) {
       const isDescendant = (parentId, childId) => {
-        const p = allProjects.find(pr => pr.id === childId);
+        const p = allProjects.find((pr) => pr.id === childId);
         if (!p) return false;
         if (p.parentId === parentId) return true;
         if (p.parentId) return isDescendant(parentId, p.parentId);
@@ -454,14 +492,14 @@ function gpmCreateProjectRow(project, allProjects, chatMap) {
       }
 
       const projects = await GPMStorage.getProjects();
-      const droppedProject = projects.find(p => p.id === droppedProjectId);
+      const droppedProject = projects.find((p) => p.id === droppedProjectId);
       if (!droppedProject) return;
 
       if (zone === 'center') {
         // ── NEST: move droppedProject INTO project ──
         if (droppedProject.parentId) {
-          const oldParent = projects.find(p => p.id === droppedProject.parentId);
-          if (oldParent) oldParent.children = oldParent.children.filter(c => c !== droppedProjectId);
+          const oldParent = projects.find((p) => p.id === droppedProject.parentId);
+          if (oldParent) oldParent.children = oldParent.children.filter((c) => c !== droppedProjectId);
         }
         droppedProject.parentId = project.id;
         if (!project.children) project.children = [];
@@ -473,29 +511,34 @@ function gpmCreateProjectRow(project, allProjects, chatMap) {
 
         // Remove from old parent
         if (droppedProject.parentId) {
-          const oldParent = projects.find(p => p.id === droppedProject.parentId);
-          if (oldParent) oldParent.children = oldParent.children.filter(c => c !== droppedProjectId);
+          const oldParent = projects.find((p) => p.id === droppedProject.parentId);
+          if (oldParent) oldParent.children = oldParent.children.filter((c) => c !== droppedProjectId);
         }
         droppedProject.parentId = sameParentId;
 
         // Reorder in parent's children array or root
         if (sameParentId) {
-          const parent = projects.find(p => p.id === sameParentId);
+          const parent = projects.find((p) => p.id === sameParentId);
           if (parent) {
-            parent.children = parent.children.filter(c => c !== droppedProjectId);
+            parent.children = parent.children.filter((c) => c !== droppedProjectId);
             const targetIdx = parent.children.indexOf(project.id);
             const insertIdx = zone === 'top' ? targetIdx : targetIdx + 1;
             parent.children.splice(Math.max(0, insertIdx), 0, droppedProjectId);
           }
         } else {
           // Root level — reorder via order field
-          const rootProjects = projects.filter(p => !p.parentId);
-          const targetIdx = rootProjects.findIndex(p => p.id === project.id);
+          const rootProjects = projects.filter((p) => !p.parentId);
+          const targetIdx = rootProjects.findIndex((p) => p.id === project.id);
           const insertIdx = zone === 'top' ? targetIdx : targetIdx + 1;
           // Rebuild order by assigning order values
-          rootProjects.splice(rootProjects.findIndex(p => p.id === droppedProjectId), 1);
+          rootProjects.splice(
+            rootProjects.findIndex((p) => p.id === droppedProjectId),
+            1
+          );
           rootProjects.splice(Math.max(0, insertIdx), 0, droppedProject);
-          rootProjects.forEach((p, i) => { p.order = i; });
+          rootProjects.forEach((p, i) => {
+            p.order = i;
+          });
         }
         await GPMStorage.saveProjects(projects);
       }
@@ -549,7 +592,7 @@ function gpmCreateProjectRow(project, allProjects, chatMap) {
 // ══════════════════════════════════════
 
 function gpmCreateChatRow(chatId, mapping, project, allProjects) {
-  const alias = (mapping?.alias && mapping.alias !== chatId) ? mapping.alias : (t('newChat') || 'New chat');
+  const alias = mapping?.alias && mapping.alias !== chatId ? mapping.alias : t('newChat') || 'New chat';
   const pinned = mapping?.pinned || false;
   const currentChatId = gpmGetCurrentChatId();
 
@@ -559,7 +602,10 @@ function gpmCreateChatRow(chatId, mapping, project, allProjects) {
   row.setAttribute('tabindex', '0');
   row.setAttribute('aria-label', (pinned ? '📌 ' : '') + alias);
   if (pinned) row.classList.add('gpm-pinned');
-  if (chatId === currentChatId) { row.classList.add('gpm-active'); row.setAttribute('aria-current', 'page'); }
+  if (chatId === currentChatId) {
+    row.classList.add('gpm-active');
+    row.setAttribute('aria-current', 'page');
+  }
   row.draggable = true;
 
   const dot = document.createElement('span');
@@ -583,7 +629,11 @@ function gpmCreateChatRow(chatId, mapping, project, allProjects) {
     gpmNavigateToChat(chatId);
   });
   row.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); gpmNavigateToChat(chatId); }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      gpmNavigateToChat(chatId);
+    }
   });
 
   row.addEventListener('dragstart', (e) => {
@@ -593,7 +643,9 @@ function gpmCreateChatRow(chatId, mapping, project, allProjects) {
     e.dataTransfer.setData('text/gpm-chat-projectid', project.id);
     row.style.opacity = '0.5';
   });
-  row.addEventListener('dragend', () => { row.style.opacity = ''; });
+  row.addEventListener('dragend', () => {
+    row.style.opacity = '';
+  });
 
   // Chat reorder: drop on another chat row
   row.addEventListener('dragover', (e) => {
@@ -602,7 +654,7 @@ function gpmCreateChatRow(chatId, mapping, project, allProjects) {
     e.preventDefault();
     e.stopPropagation();
     const rect = row.getBoundingClientRect();
-    const zone = (e.clientY - rect.top) < rect.height / 2 ? 'top' : 'bottom';
+    const zone = e.clientY - rect.top < rect.height / 2 ? 'top' : 'bottom';
     row.dataset.dropZone = zone;
     row.classList.remove('gpm-drag-top', 'gpm-drag-bottom');
     row.classList.add(zone === 'top' ? 'gpm-drag-top' : 'gpm-drag-bottom');
@@ -624,7 +676,7 @@ function gpmCreateChatRow(chatId, mapping, project, allProjects) {
 
     // Reorder chatIds within the same project
     const projects = await GPMStorage.getProjects();
-    const proj = projects.find(p => p.id === project.id);
+    const proj = projects.find((p) => p.id === project.id);
     if (!proj) return;
 
     const ids = proj.chatIds || [];
@@ -667,40 +719,56 @@ function gpmShowProjectContextMenu(x, y, project, allProjects) {
   }
 
   GPMUI.showContextMenu(GPM_STATE.modalRoot, {
-    x, y,
+    x,
+    y,
     items: [
       {
-        icon: '💬', label: t('newChatInProject'), action: () => {
+        icon: '💬',
+        label: t('newChatInProject'),
+        action: () => {
           gpmLog('New chat in project clicked:', project.name, 'projectId:', project.id);
           GPM_STATE.pendingChatAssignment = { projectId: project.id, _ts: Date.now() };
           gpmLog('Pending assignment set:', GPM_STATE.pendingChatAssignment);
           gpmTriggerNewChat();
-        }
+        },
       },
       {
-        icon: '📂', label: t('createSubfolder'), action: () => {
+        icon: '📂',
+        label: t('createSubfolder'),
+        action: () => {
           gpmLog('Create subfolder clicked');
           GPMUI.createProjectModal(GPM_STATE.modalRoot, {
             isSubfolder: true,
-            onSave: async ({ name, icon, color }) => { await GPMStorage.createProject({ name, icon, color, parentId: project.id }); gpmRenderTree(); },
-            onCancel: () => { }
+            onSave: async ({ name, icon, color }) => {
+              await GPMStorage.createProject({ name, icon, color, parentId: project.id });
+              gpmRenderTree();
+            },
+            onCancel: () => {},
           });
-        }
+        },
       },
       { divider: true },
       {
-        icon: '✏️', label: t('rename'), action: () => {
+        icon: '✏️',
+        label: t('rename'),
+        action: () => {
           gpmLog('Rename clicked');
           GPMUI.createProjectModal(GPM_STATE.modalRoot, {
             existing: project,
-            onSave: async ({ name, icon, color }) => { await GPMStorage.updateProject(project.id, { name, icon, color }); gpmRenderTree(); },
-            onCancel: () => { }
+            onSave: async ({ name, icon, color }) => {
+              await GPMStorage.updateProject(project.id, { name, icon, color });
+              gpmRenderTree();
+            },
+            onCancel: () => {},
           });
-        }
+        },
       },
       { divider: true },
       {
-        icon: '🗑️', label: t('delete'), danger: true, action: () => {
+        icon: '🗑️',
+        label: t('delete'),
+        danger: true,
+        action: () => {
           gpmLog('Delete clicked');
           if (!GPM_STATE.modalRoot) return;
           GPMUI.showConfirmDialog(GPM_STATE.modalRoot, {
@@ -708,11 +776,14 @@ function gpmShowProjectContextMenu(x, y, project, allProjects) {
             message: t('deleteConfirm'),
             confirmText: t('delete'),
             danger: true,
-            onConfirm: async () => { await GPMStorage.deleteProject(project.id); gpmRenderTree(); }
+            onConfirm: async () => {
+              await GPMStorage.deleteProject(project.id);
+              gpmRenderTree();
+            },
           });
-        }
-      }
-    ]
+        },
+      },
+    ],
   });
 }
 
@@ -720,34 +791,53 @@ function gpmShowChatContextMenu(x, y, chatId, mapping, allProjects) {
   if (!GPM_STATE.modalRoot) return;
   const isPinned = mapping?.pinned || false;
 
-  const moveSubmenu = allProjects.map(p => ({
-    icon: p.icon, label: p.name,
-    action: async () => { await GPMStorage.assignChat(chatId, p.id); gpmRenderTree(); }
+  const moveSubmenu = allProjects.map((p) => ({
+    icon: p.icon,
+    label: p.name,
+    action: async () => {
+      await GPMStorage.assignChat(chatId, p.id);
+      gpmRenderTree();
+    },
   }));
 
   GPMUI.showContextMenu(GPM_STATE.modalRoot, {
-    x, y,
+    x,
+    y,
     items: [
       {
-        icon: isPinned ? '📌' : '📍', label: isPinned ? t('unpinChat') : t('pinChat'),
-        action: async () => { await GPMStorage.togglePinChat(chatId); gpmRenderTree(); }
+        icon: isPinned ? '📌' : '📍',
+        label: isPinned ? t('unpinChat') : t('pinChat'),
+        action: async () => {
+          await GPMStorage.togglePinChat(chatId);
+          gpmRenderTree();
+        },
       },
       {
-        icon: '✏️', label: t('renameChat'), action: () => {
+        icon: '✏️',
+        label: t('renameChat'),
+        action: () => {
           GPMUI.createRenameModal(GPM_STATE.modalRoot, {
             currentName: mapping?.alias || chatId,
-            onSave: async (n) => { await GPMStorage.setChatAlias(chatId, n); gpmRenderTree(); },
-            onCancel: () => { }
+            onSave: async (n) => {
+              await GPMStorage.setChatAlias(chatId, n);
+              gpmRenderTree();
+            },
+            onCancel: () => {},
           });
-        }
+        },
       },
       { icon: '📂', label: t('moveToProject'), submenu: moveSubmenu },
       { divider: true },
       {
-        icon: '🗑️', label: t('removeFromProject'), danger: true,
-        action: async () => { await GPMStorage.unassignChat(chatId); gpmRenderTree(); }
-      }
-    ]
+        icon: '🗑️',
+        label: t('removeFromProject'),
+        danger: true,
+        action: async () => {
+          await GPMStorage.unassignChat(chatId);
+          gpmRenderTree();
+        },
+      },
+    ],
   });
 }
 
@@ -762,7 +852,7 @@ function gpmShowCreateProjectModal() {
       await GPMStorage.createProject({ name, icon, color });
       gpmRenderTree();
     },
-    onCancel: () => { }
+    onCancel: () => {},
   });
 }
 
@@ -773,27 +863,61 @@ async function gpmShowSettingsModal() {
   GPMUI.createSettingsModal(GPM_STATE.modalRoot, {
     settings,
     backupInfo,
-    onSave: async (s) => { await GPMStorage.saveSettings(s); gpmSetLang(s.lang); gpmRenderTree(); },
-    onCancel: () => { },
+    onSave: async (s) => {
+      await GPMStorage.saveSettings(s);
+      gpmSetLang(s.lang);
+      gpmRenderTree();
+    },
+    onCancel: () => {},
     onExport: async () => {
       const json = await GPMStorage.exportAll();
       const blob = new Blob([json], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url;
-      a.download = `gpm-backup-${Date.now()}.json`; a.click();
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `gpm-backup-${Date.now()}.json`;
+      a.click();
       URL.revokeObjectURL(url);
     },
     onImport: async (jsonStr) => {
-      try { await GPMStorage.importAll(jsonStr); const s = await GPMStorage.getSettings(); gpmSetLang(s.lang); gpmRenderTree(); }
-      catch (e) {
-        if (GPM_STATE.modalRoot) GPMUI.showAlertDialog(GPM_STATE.modalRoot, { title: t('importData'), message: t('importError') });
+      try {
+        await GPMStorage.importAll(jsonStr);
+        const s = await GPMStorage.getSettings();
+        gpmSetLang(s.lang);
+        gpmRenderTree();
+        const deletedCount = await gpmCleanupAfterImport();
+        if (deletedCount > 0 && GPM_STATE.modalRoot) {
+          GPMUI.showAlertDialog(GPM_STATE.modalRoot, {
+            title: t('importData'),
+            message: t('deletedChatsCleaned').replace('{count}', deletedCount),
+          });
+          gpmRenderTree();
+        }
+      } catch (e) {
+        if (GPM_STATE.modalRoot)
+          GPMUI.showAlertDialog(GPM_STATE.modalRoot, { title: t('importData'), message: t('importError') });
       }
     },
-    onClear: async () => { await GPMStorage.clearAll(); gpmSetLang('en'); gpmRenderTree(); },
+    onClear: async () => {
+      await GPMStorage.clearAll();
+      gpmSetLang('en');
+      gpmRenderTree();
+    },
     onRestoreBackup: async () => {
       const ok = await GPMStorage.restoreFromBackup();
-      if (ok) { gpmRenderTree(); }
-      else if (GPM_STATE.modalRoot) { GPMUI.showAlertDialog(GPM_STATE.modalRoot, { title: t('restoreBackup'), message: t('noBackupAvailable') }); }
-    }
+      if (ok) {
+        gpmRenderTree();
+        const deletedCount = await gpmCleanupAfterImport();
+        if (deletedCount > 0 && GPM_STATE.modalRoot) {
+          GPMUI.showAlertDialog(GPM_STATE.modalRoot, {
+            title: t('restoreBackup'),
+            message: t('deletedChatsCleaned').replace('{count}', deletedCount),
+          });
+          gpmRenderTree();
+        }
+      } else if (GPM_STATE.modalRoot) {
+        GPMUI.showAlertDialog(GPM_STATE.modalRoot, { title: t('restoreBackup'), message: t('noBackupAvailable') });
+      }
+    },
   });
 }

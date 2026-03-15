@@ -24,7 +24,7 @@ const GPMStorage = (() => {
 
   function _withLock(fn) {
     const next = _writeLock.then(fn, fn);
-    _writeLock = next.catch(() => { });
+    _writeLock = next.catch(() => {});
     return next;
   }
 
@@ -41,7 +41,9 @@ const GPMStorage = (() => {
   async function _set(key, value) {
     try {
       await chrome.storage.local.set({ [key]: value });
-      try { chrome.runtime.sendMessage({ type: 'GPM_STORAGE_UPDATED' }); } catch (_) { }
+      try {
+        chrome.runtime.sendMessage({ type: 'GPM_STORAGE_UPDATED' });
+      } catch (_) {}
     } catch (e) {
       if (e.message?.includes('Extension context invalidated')) return;
       throw e;
@@ -69,7 +71,7 @@ const GPMStorage = (() => {
     projects.push(project);
 
     if (parentId) {
-      const parent = projects.find(p => p.id === parentId);
+      const parent = projects.find((p) => p.id === parentId);
       if (parent) parent.children.push(id);
     }
 
@@ -79,7 +81,7 @@ const GPMStorage = (() => {
 
   async function updateProject(id, updates) {
     const projects = await getProjects();
-    const idx = projects.findIndex(p => p.id === id);
+    const idx = projects.findIndex((p) => p.id === id);
     if (idx === -1) return null;
     Object.assign(projects[idx], updates);
     await saveProjects(projects);
@@ -92,7 +94,7 @@ const GPMStorage = (() => {
 
     // Recursively collect all descendant IDs
     function collectDescendants(pid) {
-      const node = projects.find(p => p.id === pid);
+      const node = projects.find((p) => p.id === pid);
       if (!node) return [pid];
       let ids = [pid];
       for (const childId of node.children) {
@@ -111,19 +113,19 @@ const GPMStorage = (() => {
     }
 
     // Remove from parent's children array
-    const target = projects.find(p => p.id === id);
+    const target = projects.find((p) => p.id === id);
     if (target?.parentId) {
-      const parent = projects.find(p => p.id === target.parentId);
-      if (parent) parent.children = parent.children.filter(c => c !== id);
+      const parent = projects.find((p) => p.id === target.parentId);
+      if (parent) parent.children = parent.children.filter((c) => c !== id);
     }
 
-    projects = projects.filter(p => !toDelete.has(p.id));
+    projects = projects.filter((p) => !toDelete.has(p.id));
     await saveProjects(projects);
     await saveChatMap(chatMap);
   }
 
   function getRootProjects(projects) {
-    return projects.filter(p => !p.parentId);
+    return projects.filter((p) => !p.parentId);
   }
 
   // ── Chat Map ──
@@ -149,14 +151,19 @@ const GPMStorage = (() => {
 
       // Remove from old project's chatIds
       if (chatMap[chatId]) {
-        const oldProj = projects.find(p => p.id === chatMap[chatId].projectId);
-        if (oldProj) oldProj.chatIds = (oldProj.chatIds || []).filter(c => c !== chatId);
+        const oldProj = projects.find((p) => p.id === chatMap[chatId].projectId);
+        if (oldProj) oldProj.chatIds = (oldProj.chatIds || []).filter((c) => c !== chatId);
       }
 
-      chatMap[chatId] = { projectId, alias: chatMap[chatId]?.alias || '', pinned: chatMap[chatId]?.pinned || false, _autoResolved: chatMap[chatId]?._autoResolved || false };
+      chatMap[chatId] = {
+        projectId,
+        alias: chatMap[chatId]?.alias || '',
+        pinned: chatMap[chatId]?.pinned || false,
+        _autoResolved: chatMap[chatId]?._autoResolved || false,
+      };
 
       // Add to new project's chatIds
-      const newProj = projects.find(p => p.id === projectId);
+      const newProj = projects.find((p) => p.id === projectId);
       if (newProj && !(newProj.chatIds || []).includes(chatId)) {
         if (!newProj.chatIds) newProj.chatIds = [];
         newProj.chatIds.push(chatId);
@@ -174,8 +181,8 @@ const GPMStorage = (() => {
       const projects = await getProjects();
 
       if (chatMap[chatId]) {
-        const proj = projects.find(p => p.id === chatMap[chatId].projectId);
-        if (proj) proj.chatIds = (proj.chatIds || []).filter(c => c !== chatId);
+        const proj = projects.find((p) => p.id === chatMap[chatId].projectId);
+        if (proj) proj.chatIds = (proj.chatIds || []).filter((c) => c !== chatId);
         delete chatMap[chatId];
       }
 
@@ -216,13 +223,13 @@ const GPMStorage = (() => {
 
   async function deleteQuickPrompt(id) {
     let prompts = await getQuickPrompts();
-    prompts = prompts.filter(p => p.id !== id);
+    prompts = prompts.filter((p) => p.id !== id);
     await _set('gpm_quickPrompts', prompts);
   }
 
   async function updateQuickPrompt(id, updates) {
     const prompts = await getQuickPrompts();
-    const idx = prompts.findIndex(p => p.id === id);
+    const idx = prompts.findIndex((p) => p.id === id);
     if (idx !== -1) Object.assign(prompts[idx], updates);
     await _set('gpm_quickPrompts', prompts);
   }
@@ -239,9 +246,16 @@ const GPMStorage = (() => {
   // ── Import / Export ──
   async function exportAll() {
     const [projects, chatMap, quickPrompts, settings] = await Promise.all([
-      getProjects(), getChatMap(), getQuickPrompts(), getSettings()
+      getProjects(),
+      getChatMap(),
+      getQuickPrompts(),
+      getSettings(),
     ]);
-    return JSON.stringify({ gpm_projects: projects, gpm_chatMap: chatMap, gpm_quickPrompts: quickPrompts, gpm_settings: settings }, null, 2);
+    return JSON.stringify(
+      { gpm_projects: projects, gpm_chatMap: chatMap, gpm_quickPrompts: quickPrompts, gpm_settings: settings },
+      null,
+      2
+    );
   }
 
   // ── Validation & Sanitization Helpers ──
@@ -260,10 +274,10 @@ const GPMStorage = (() => {
       icon: typeof p.icon === 'string' ? p.icon.slice(0, 8) : '📁',
       color: typeof p.color === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(p.color) ? p.color : '#8ab4f8',
       parentId: typeof p.parentId === 'string' ? sanitizeString(p.parentId) : null,
-      children: Array.isArray(p.children) ? p.children.filter(c => typeof c === 'string').map(sanitizeString) : [],
-      chatIds: Array.isArray(p.chatIds) ? p.chatIds.filter(c => typeof c === 'string').map(sanitizeString) : [],
+      children: Array.isArray(p.children) ? p.children.filter((c) => typeof c === 'string').map(sanitizeString) : [],
+      chatIds: Array.isArray(p.chatIds) ? p.chatIds.filter((c) => typeof c === 'string').map(sanitizeString) : [],
       collapsed: typeof p.collapsed === 'boolean' ? p.collapsed : false,
-      order: typeof p.order === 'number' ? p.order : undefined
+      order: typeof p.order === 'number' ? p.order : undefined,
     };
   }
 
@@ -273,7 +287,7 @@ const GPMStorage = (() => {
     return {
       projectId: sanitizeString(entry.projectId),
       alias: typeof entry.alias === 'string' ? sanitizeString(entry.alias) : '',
-      pinned: typeof entry.pinned === 'boolean' ? entry.pinned : false
+      pinned: typeof entry.pinned === 'boolean' ? entry.pinned : false,
     };
   }
 
@@ -285,17 +299,35 @@ const GPMStorage = (() => {
       id: typeof p.id === 'string' ? sanitizeString(p.id) : uid(),
       title: sanitizeString(p.title),
       content: sanitizeString(p.content),
-      category: typeof p.category === 'string' ? sanitizeString(p.category) : 'General'
+      category: typeof p.category === 'string' ? sanitizeString(p.category) : 'General',
     };
   }
 
   function validateSettings(s) {
     if (!s || typeof s !== 'object') return null;
-    const validLangs = ['ar', 'bn', 'de', 'en', 'es', 'fr', 'hi', 'id', 'it', 'ja', 'ko', 'pt', 'ru', 'th', 'tr', 'vi', 'zh'];
+    const validLangs = [
+      'ar',
+      'bn',
+      'de',
+      'en',
+      'es',
+      'fr',
+      'hi',
+      'id',
+      'it',
+      'ja',
+      'ko',
+      'pt',
+      'ru',
+      'th',
+      'tr',
+      'vi',
+      'zh-CN',
+    ];
     const validThemes = ['auto', 'dark', 'light'];
     return {
       lang: validLangs.includes(s.lang) ? s.lang : 'en',
-      theme: validThemes.includes(s.theme) ? s.theme : 'auto'
+      theme: validThemes.includes(s.theme) ? s.theme : 'auto',
     };
   }
 
@@ -304,13 +336,15 @@ const GPMStorage = (() => {
 
     // Pre-import backup of current data
     const [curProjects, curChatMap, curPrompts] = await Promise.all([
-      _get('gpm_projects'), _get('gpm_chatMap'), _get('gpm_quickPrompts')
+      _get('gpm_projects'),
+      _get('gpm_chatMap'),
+      _get('gpm_quickPrompts'),
     ]);
     await chrome.storage.local.set({
       gpm_pre_import_projects: curProjects || [],
       gpm_pre_import_chatMap: curChatMap || {},
       gpm_pre_import_quickPrompts: curPrompts || [],
-      gpm_pre_import_ts: Date.now()
+      gpm_pre_import_ts: Date.now(),
     });
 
     // Validate and sanitize each data field before writing
@@ -341,7 +375,7 @@ const GPMStorage = (() => {
       gpm_projects: [],
       gpm_chatMap: {},
       gpm_quickPrompts: [],
-      gpm_settings: { lang: 'en', theme: 'auto' }
+      gpm_settings: { lang: 'en', theme: 'auto' },
     });
   }
 
@@ -367,17 +401,34 @@ const GPMStorage = (() => {
     if (chatMapBackup) {
       await _set('gpm_chatMap', chatMapBackup);
     }
-    if (typeof console !== 'undefined' && console.log) console.log('[GPM] Restored from backup:', backup.length, 'projects');
+    if (typeof console !== 'undefined' && console.log)
+      console.log('[GPM] Restored from backup:', backup.length, 'projects');
     return true;
   }
 
   return {
-    getProjects, saveProjects, createProject, updateProject, deleteProject,
+    getProjects,
+    saveProjects,
+    createProject,
+    updateProject,
+    deleteProject,
     getRootProjects,
-    getChatMap, saveChatMap, assignChat, unassignChat, setChatAlias, togglePinChat,
-    getQuickPrompts, saveQuickPrompt, deleteQuickPrompt, updateQuickPrompt,
-    getSettings, saveSettings,
-    exportAll, importAll, clearAll,
-    getBackupInfo, restoreFromBackup
+    getChatMap,
+    saveChatMap,
+    assignChat,
+    unassignChat,
+    setChatAlias,
+    togglePinChat,
+    getQuickPrompts,
+    saveQuickPrompt,
+    deleteQuickPrompt,
+    updateQuickPrompt,
+    getSettings,
+    saveSettings,
+    exportAll,
+    importAll,
+    clearAll,
+    getBackupInfo,
+    restoreFromBackup,
   };
 })();

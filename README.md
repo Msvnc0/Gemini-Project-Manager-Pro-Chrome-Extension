@@ -118,6 +118,17 @@ All data is stored locally in your browser. No data is sent to external servers.
 
 ## Changelog
 
+### v1.2.3 — Post-Import Cleanup
+- ✨ **Added:** Automatic cleanup after importing/restoring backup — deleted chats are now removed from GPM projects
+- 🔄 **Added:** Retry logic (3 attempts, 1.5s intervals) waits for Gemini sidebar to load before cleanup
+- 💬 **Added:** User notification showing how many deleted chats were cleaned up
+- 🌍 **Added:** `deletedChatsCleaned` message in all 17 languages
+
+### v1.2.2 — Chrome Web Store Compliance
+- 🐛 **Fixed:** `zh_CN` locale folder renamed to `zh-CN` (Chrome requires hyphen format)
+- 🐛 **Fixed:** Removed illegal `nul` file that caused Chrome extension loading error
+- 🌍 **Updated:** Chinese language code standardized across all files (`zh` → `zh-CN`)
+
 ### v1.2.1 — Deleted Chat Sync Fix
 - 🐛 **Fixed:** Chats deleted from Gemini's native interface now automatically disappear from GPM project folders — no more ghost entries
 - 🛡️ **Added:** Two-phase deletion verification with debounce prevents false positives from Gemini's lazy-loading or DOM recycling

@@ -47,8 +47,12 @@ function gpmTriggerNewChat() {
   for (const el of candidates) {
     const ariaLabel = (el.getAttribute('aria-label') || '').toLowerCase();
     const text = (el.textContent || '').trim().toLowerCase();
-    if (text.includes('new chat') || text.includes('yeni sohbet') ||
-      ariaLabel.includes('new chat') || ariaLabel.includes('yeni sohbet')) {
+    if (
+      text.includes('new chat') ||
+      text.includes('yeni sohbet') ||
+      ariaLabel.includes('new chat') ||
+      ariaLabel.includes('yeni sohbet')
+    ) {
       gpmLog('Clicking "New chat" link');
       el.click();
       clicked = true;
@@ -72,7 +76,10 @@ function gpmNavigateToChat(chatId) {
   const links = document.querySelectorAll(GPM_SELECTORS.chatItem);
   for (const link of links) {
     const href = link.getAttribute('href') || '';
-    if (href.includes(chatId)) { link.click(); return; }
+    if (href.includes(chatId)) {
+      link.click();
+      return;
+    }
   }
   // Fallback: direct navigation using /app/<id> format
   window.location.href = `https://gemini.google.com/app/${chatId}`;
@@ -91,14 +98,23 @@ function gpmGetCurrentChatId() {
 function gpmObserveSPANavigation() {
   let lastUrl = location.href;
   const check = () => {
-    if (location.href !== lastUrl) { lastUrl = location.href; gpmOnNavigate(); }
+    if (location.href !== lastUrl) {
+      lastUrl = location.href;
+      gpmOnNavigate();
+    }
   };
   new MutationObserver(check).observe(document.body, { childList: true, subtree: true });
   window.addEventListener('popstate', check);
   const origPush = history.pushState;
   const origReplace = history.replaceState;
-  history.pushState = function (...a) { origPush.apply(this, a); check(); };
-  history.replaceState = function (...a) { origReplace.apply(this, a); check(); };
+  history.pushState = function (...a) {
+    origPush.apply(this, a);
+    check();
+  };
+  history.replaceState = function (...a) {
+    origReplace.apply(this, a);
+    check();
+  };
 }
 
 function gpmOnNavigate() {
@@ -161,7 +177,7 @@ function gpmDetectDeletedChats() {
     // Collect all stored chat IDs across all projects
     const storedChatIds = new Set();
     for (const project of projects) {
-      for (const cid of (project.chatIds || [])) {
+      for (const cid of project.chatIds || []) {
         storedChatIds.add(cid);
       }
     }
@@ -189,7 +205,7 @@ function gpmDetectDeletedChats() {
     }
 
     // Second pass: only remove IDs that were orphaned in BOTH checks
-    const confirmedDeleted = orphanedIds.filter(cid => GPM_STATE._pendingDeletedChatIds.has(cid));
+    const confirmedDeleted = orphanedIds.filter((cid) => GPM_STATE._pendingDeletedChatIds.has(cid));
     GPM_STATE._pendingDeletedChatIds = null; // Reset for next cycle
 
     if (confirmedDeleted.length === 0) {
@@ -205,7 +221,7 @@ function gpmDetectDeletedChats() {
 
     for (const project of projects) {
       const before = (project.chatIds || []).length;
-      project.chatIds = (project.chatIds || []).filter(cid => !confirmedSet.has(cid));
+      project.chatIds = (project.chatIds || []).filter((cid) => !confirmedSet.has(cid));
       if (project.chatIds.length !== before) {
         storageUpdated = true;
       }
@@ -228,6 +244,100 @@ function gpmDetectDeletedChats() {
 }
 
 // ══════════════════════════════════════
+//  CLEANUP AFTER IMPORT (Post-import sync)
+// ══════════════════════════════════════
+
+/**
+ * Clean up deleted chats after importing/restoring data.
+ * Uses retry logic to wait for Gemini sidebar to load.
+ *
+ * @param {number} maxRetries - Maximum retry attempts (default: 3)
+ * @param {number} retryDelay - Delay between retries in ms (default: 1500)
+ * @returns {Promise<number>} - Number of chats removed
+ */
+async function gpmCleanupAfterImport(maxRetries = 3, retryDelay = 1500) {
+  if (!gpmIsContextValid()) return 0;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const sidebar = document.querySelector(GPM_SELECTORS.sidebar);
+    if (!sidebar) {
+      gpmLog(`Cleanup attempt ${attempt}/${maxRetries}: Sidebar not found, waiting...`);
+      if (attempt < maxRetries) {
+        await new Promise((resolve) => setTimeout(resolve, retryDelay));
+      }
+      continue;
+    }
+
+    // Collect all chat IDs visible in the sidebar DOM
+    const sidebarLinks = sidebar.querySelectorAll('a[href^="/app/"]');
+    const domChatIds = new Set();
+    for (const link of sidebarLinks) {
+      const href = link.getAttribute('href') || '';
+      const cid = extractChatIdFromUrl(href);
+      if (cid) domChatIds.add(cid);
+    }
+
+    // If sidebar has no chat links, it may still be loading
+    if (domChatIds.size === 0) {
+      gpmLog(`Cleanup attempt ${attempt}/${maxRetries}: No chat links in sidebar, waiting...`);
+      if (attempt < maxRetries) {
+        await new Promise((resolve) => setTimeout(resolve, retryDelay));
+      }
+      continue;
+    }
+
+    // Sidebar is ready with chat content
+    gpmLog(`Cleanup attempt ${attempt}/${maxRetries}: Found ${domChatIds.size} chats in sidebar`);
+
+    // Load stored data
+    const projects = await GPMStorage.getProjects();
+    const chatMap = await GPMStorage.getChatMap();
+
+    // Collect all stored chat IDs across all projects
+    const storedChatIds = new Set();
+    for (const project of projects) {
+      for (const cid of project.chatIds || []) {
+        storedChatIds.add(cid);
+      }
+    }
+
+    // Find orphaned chat IDs (in storage but not in DOM)
+    const orphanedIds = [];
+    for (const cid of storedChatIds) {
+      if (!domChatIds.has(cid)) {
+        orphanedIds.push(cid);
+      }
+    }
+
+    if (orphanedIds.length === 0) {
+      gpmLog('Cleanup: No orphaned chats found');
+      return 0;
+    }
+
+    gpmLog('Cleanup: Found', orphanedIds.length, 'orphaned chat(s) to remove');
+
+    // Remove orphaned chats from storage
+    const orphanedSet = new Set(orphanedIds);
+    for (const project of projects) {
+      project.chatIds = (project.chatIds || []).filter((cid) => !orphanedSet.has(cid));
+    }
+
+    for (const cid of orphanedIds) {
+      delete chatMap[cid];
+    }
+
+    await GPMStorage.saveProjects(projects);
+    await GPMStorage.saveChatMap(chatMap);
+
+    gpmLog('Cleanup: Removed', orphanedIds.length, 'deleted chat(s) from storage');
+    return orphanedIds.length;
+  }
+
+  gpmLog('Cleanup: Max retries reached, sidebar may not be loaded');
+  return 0;
+}
+
+// ══════════════════════════════════════
 //  NEW CHAT OBSERVER (Unified Polling)
 // ══════════════════════════════════════
 
@@ -238,7 +348,10 @@ function gpmObserveNewChats() {
 
   // ── Unified polling function (replaces 3 separate setIntervals) ──
   function gpmPollCheck() {
-    if (!gpmIsContextValid()) { gpmStopPolling(); return; }
+    if (!gpmIsContextValid()) {
+      gpmStopPolling();
+      return;
+    }
 
     const currentUrl = location.href;
     const id = gpmGetCurrentChatId();
@@ -261,9 +374,15 @@ function gpmObserveNewChats() {
           gpmLog('Chat assigned successfully');
           gpmRenderTree();
           // Retry alias resolution after delays to catch Gemini title update
-          setTimeout(() => { if (gpmIsContextValid()) gpmScheduleAliasResolve(); }, 2000);
-          setTimeout(() => { if (gpmIsContextValid()) gpmScheduleAliasResolve(); }, 5000);
-          setTimeout(() => { if (gpmIsContextValid()) gpmScheduleAliasResolve(); }, 10000);
+          setTimeout(() => {
+            if (gpmIsContextValid()) gpmScheduleAliasResolve();
+          }, 2000);
+          setTimeout(() => {
+            if (gpmIsContextValid()) gpmScheduleAliasResolve();
+          }, 5000);
+          setTimeout(() => {
+            if (gpmIsContextValid()) gpmScheduleAliasResolve();
+          }, 10000);
         });
       } else {
         // Re-render to update active chat highlight
@@ -292,7 +411,10 @@ function gpmObserveNewChats() {
   }
 
   function gpmStopPolling() {
-    if (pollIntervalId) { clearInterval(pollIntervalId); pollIntervalId = null; }
+    if (pollIntervalId) {
+      clearInterval(pollIntervalId);
+      pollIntervalId = null;
+    }
   }
 
   // ── Visibility-based polling control — stop in background tabs ──
@@ -319,7 +441,7 @@ function gpmObserveNewChats() {
 
     new MutationObserver((mutations) => {
       // Filter: ignore mutations from our own GPM elements to avoid feedback loops
-      const relevant = mutations.some(m => {
+      const relevant = mutations.some((m) => {
         const target = m.target;
         if (target.closest && target.closest('[data-gpm]')) return false;
         if (target.dataset && target.dataset.gpm) return false;
@@ -334,7 +456,7 @@ function gpmObserveNewChats() {
 
       // ── Trigger deleted chat detection on sidebar DOM changes ──
       // Check if any nodes were REMOVED (potential chat deletion)
-      const hasRemovals = mutations.some(m => m.removedNodes.length > 0);
+      const hasRemovals = mutations.some((m) => m.removedNodes.length > 0);
       if (hasRemovals) {
         gpmDetectDeletedChats();
       }
@@ -356,14 +478,14 @@ function gpmEnhanceNativeChatItems() {
   const { signal } = GPM_STATE.enhanceAbortController;
 
   // Clear previous enhancement markers (nodes may have been recycled)
-  document.querySelectorAll('[data-gpm-enhanced]').forEach(el => {
+  document.querySelectorAll('[data-gpm-enhanced]').forEach((el) => {
     if (!el.closest('[data-gpm]')) delete el.dataset.gpmEnhanced;
   });
 
   // Gemini uses /app/<id> format — find all chat links (exclude /app itself which is "New chat")
   const chatItems = document.querySelectorAll('a[href^="/app/"]');
 
-  chatItems.forEach(item => {
+  chatItems.forEach((item) => {
     // Skip items inside our own GPM container
     if (item.closest('[data-gpm]')) return;
 
@@ -379,30 +501,42 @@ function gpmEnhanceNativeChatItems() {
     // Get the chat title from the link text
     const chatTitle = (item.textContent || '').trim();
 
-    item.addEventListener('dragstart', (e) => {
-      e.stopPropagation();
-      gpmLog('Drag started for chat:', chatId, 'title:', chatTitle);
-      e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/gpm-chat-id', chatId);
-      e.dataTransfer.setData('text/gpm-chat-title', chatTitle);
-      e.dataTransfer.setData('text/plain', chatId);
-      item.style.opacity = '0.5';
-    }, { signal });
+    item.addEventListener(
+      'dragstart',
+      (e) => {
+        e.stopPropagation();
+        gpmLog('Drag started for chat:', chatId, 'title:', chatTitle);
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/gpm-chat-id', chatId);
+        e.dataTransfer.setData('text/gpm-chat-title', chatTitle);
+        e.dataTransfer.setData('text/plain', chatId);
+        item.style.opacity = '0.5';
+      },
+      { signal }
+    );
 
-    item.addEventListener('dragend', () => {
-      item.style.opacity = '';
-    }, { signal });
+    item.addEventListener(
+      'dragend',
+      () => {
+        item.style.opacity = '';
+      },
+      { signal }
+    );
 
     // Custom right-click context menu
-    item.addEventListener('contextmenu', async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
+    item.addEventListener(
+      'contextmenu',
+      async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
 
-      if (!GPM_STATE.modalRoot) return;
+        if (!GPM_STATE.modalRoot) return;
 
-      const projects = await GPMStorage.getProjects();
-      const chatMap = await GPMStorage.getChatMap();
-      gpmShowChatContextMenu(e.clientX, e.clientY, chatId, chatMap[chatId], projects);
-    }, { signal });
+        const projects = await GPMStorage.getProjects();
+        const chatMap = await GPMStorage.getChatMap();
+        gpmShowChatContextMenu(e.clientX, e.clientY, chatId, chatMap[chatId], projects);
+      },
+      { signal }
+    );
   });
 }

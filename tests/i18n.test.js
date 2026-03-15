@@ -37,7 +37,25 @@ const SUPPORTED_LANG_CODES = globalThis.SUPPORTED_LANG_CODES;
 const LANGUAGE_NAMES_IN = globalThis.LANGUAGE_NAMES_IN;
 
 // ── Constants ──
-const SUPPORTED_LANGUAGES = ['ar', 'bn', 'de', 'en', 'es', 'fr', 'hi', 'id', 'it', 'ja', 'ko', 'pt', 'ru', 'th', 'tr', 'vi', 'zh'];
+const SUPPORTED_LANGUAGES = [
+  'ar',
+  'bn',
+  'de',
+  'en',
+  'es',
+  'fr',
+  'hi',
+  'id',
+  'it',
+  'ja',
+  'ko',
+  'pt',
+  'ru',
+  'th',
+  'tr',
+  'vi',
+  'zh-CN',
+];
 const ENGLISH_KEYS = Object.keys(GPM_STRINGS.en);
 
 describe('GPM_STRINGS structure', () => {
@@ -205,8 +223,8 @@ describe('t() translation function', () => {
     expect(t('newProject')).toBe('新しいプロジェクト');
   });
 
-  it('should return Chinese translation when lang is zh', () => {
-    gpmSetLang('zh');
+  it('should return Chinese translation when lang is zh-CN', () => {
+    gpmSetLang('zh-CN');
     expect(t('newProject')).toBe('新建项目');
   });
 
@@ -326,7 +344,7 @@ describe('getLanguageDisplayName()', () => {
     expect(getLanguageDisplayName('de')).toBe('Deutsch (German)');
     expect(getLanguageDisplayName('fr')).toBe('Français (French)');
     expect(getLanguageDisplayName('ja')).toBe('日本語 (Japanese)');
-    expect(getLanguageDisplayName('zh')).toBe('中文 (Chinese)');
+    expect(getLanguageDisplayName('zh-CN')).toBe('中文 (简体) (Chinese)');
     expect(getLanguageDisplayName('ar')).toBe('العربية (Arabic)');
     expect(getLanguageDisplayName('ko')).toBe('한국어 (Korean)');
     expect(getLanguageDisplayName('es')).toBe('Español (Spanish)');
@@ -362,10 +380,10 @@ describe('getLanguageDisplayName()', () => {
   });
 
   it('should show Chinese translations when UI is Chinese', () => {
-    gpmSetLang('zh');
+    gpmSetLang('zh-CN');
     expect(getLanguageDisplayName('de')).toBe('Deutsch (德语)');
     expect(getLanguageDisplayName('fr')).toBe('Français (法语)');
-    expect(getLanguageDisplayName('zh')).toBe('中文');
+    expect(getLanguageDisplayName('zh-CN')).toBe('中文 (简体)');
   });
 
   it('should dynamically change when UI language changes', () => {
@@ -414,7 +432,7 @@ describe('getLanguageOptions()', () => {
   it('should include all supported language codes', () => {
     gpmSetLang('en');
     const options = getLanguageOptions();
-    const codes = options.map(o => o.code);
+    const codes = options.map((o) => o.code);
     for (const code of SUPPORTED_LANG_CODES) {
       expect(codes).toContain(code);
     }
@@ -423,12 +441,12 @@ describe('getLanguageOptions()', () => {
   it('should reflect current UI language in display names', () => {
     gpmSetLang('en');
     const enOptions = getLanguageOptions();
-    const deOptionEn = enOptions.find(o => o.code === 'de');
+    const deOptionEn = enOptions.find((o) => o.code === 'de');
     expect(deOptionEn.displayName).toBe('Deutsch (German)');
 
     gpmSetLang('tr');
     const trOptions = getLanguageOptions();
-    const deOptionTr = trOptions.find(o => o.code === 'de');
+    const deOptionTr = trOptions.find((o) => o.code === 'de');
     expect(deOptionTr.displayName).toBe('Deutsch (Almanca)');
   });
 });
@@ -445,7 +463,7 @@ describe('detectBrowserLanguage()', () => {
     Object.defineProperty(globalThis, 'navigator', {
       value: originalNavigator,
       writable: true,
-      configurable: true
+      configurable: true,
     });
   });
 
@@ -453,10 +471,10 @@ describe('detectBrowserLanguage()', () => {
     Object.defineProperty(globalThis, 'navigator', {
       value: {
         languages: languages || [],
-        language: language || ''
+        language: language || '',
       },
       writable: true,
-      configurable: true
+      configurable: true,
     });
   }
 
@@ -470,9 +488,9 @@ describe('detectBrowserLanguage()', () => {
     expect(detectBrowserLanguage()).toBe('de');
   });
 
-  it('should detect regional variant via alias (e.g. "zh-CN" → "zh")', () => {
+  it('should detect regional variant via alias (e.g. "zh-CN" → "zh-CN")', () => {
     mockNavigator({ languages: ['zh-CN'], language: 'zh-CN' });
-    expect(detectBrowserLanguage()).toBe('zh');
+    expect(detectBrowserLanguage()).toBe('zh-CN');
   });
 
   it('should detect regional variant via alias (e.g. "pt-BR" → "pt")', () => {
@@ -528,7 +546,7 @@ describe('detectBrowserLanguage()', () => {
 
   it('should handle "zh-TW" as Chinese', () => {
     mockNavigator({ languages: ['zh-TW'], language: 'zh-TW' });
-    expect(detectBrowserLanguage()).toBe('zh');
+    expect(detectBrowserLanguage()).toBe('zh-CN');
   });
 
   it('should handle complex language preference lists', () => {
