@@ -2,13 +2,14 @@
  * storage.js — Data Layer
  * Manages recursive project trees, chat mappings, quick prompts, and settings.
  *
- * Schema Version: 2
+ * Schema Version: 3
  *
  * Data Schema:
  *   gpm_schemaVersion: number — current schema version
  *   gpm_projects: Array<Project>
  *   Project: { id, name, icon, color, parentId: null|string, children: string[], chatIds: string[], collapsed: bool, createdAt: number, updatedAt: number }
- *   gpm_chatMap: { [chatId]: { projectId, alias, pinned, _autoResolved } }
+ *   gpm_chatMap: { [chatId]: { projectId, alias, pinned, _autoResolved, tags: string[], starredAt: number|null } }
+ *   gpm_tags: { [tagId]: { id, name, color, count, createdAt, updatedAt } }
  *   gpm_quickPrompts: Array<{ id, title, content, category }>
  *   gpm_settings: { lang, theme }
  *   gpm_backups: Array<Backup> — multiple backup versions
