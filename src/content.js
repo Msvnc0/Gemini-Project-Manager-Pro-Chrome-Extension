@@ -136,7 +136,23 @@ async function gpmInit() {
   // ── Step 12: Start DOM health monitor ──
   gpmStartHealthMonitor();
 
-  // ── Step 13: Start sync monitoring ──
+  // ── Step 13: Initialize tag filter bar ──
+  try {
+    const filterBar = await GPMTagUI.createTagFilterBar((tagIds) => {
+      GPM_STATE.activeTagFilters = tagIds;
+      gpmRenderTree();
+    });
+    if (GPM_STATE.container) {
+      const header = GPM_STATE.container.querySelector('[data-gpm="header"]');
+      if (header) {
+        header.after(filterBar);
+      }
+    }
+  } catch (e) {
+    console.warn('[GPM] Tag filter bar init failed:', e);
+  }
+
+  // ── Step 14: Start sync monitoring ──
   try {
     if (typeof GPMSyncManager !== 'undefined') {
       await GPMSyncManager.startAutoSync();
