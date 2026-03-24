@@ -1020,3 +1020,88 @@ async function gpmShowSettingsModal() {
     },
   });
 }
+
+// ══════════════════════════════════════
+//  BULK SELECTION OPERATIONS
+// ══════════════════════════════════════
+
+function gpmToggleBulkSelection(chatId, event) {
+  if (!GPM_STATE.bulkSelection.active) {
+    GPM_STATE.bulkSelection.active = true;
+  }
+  if (event && (event.ctrlKey || event.metaKey)) {
+    if (GPM_STATE.bulkSelection.selectedChatIds.has(chatId)) {
+      GPM_STATE.bulkSelection.selectedChatIds.delete(chatId);
+    } else {
+      if (GPM_STATE.bulkSelection.selectedChatIds.size >= 50) {
+        showToast(t('bulkLimitReached'));
+        return;
+      }
+      GPM_STATE.bulkSelection.selectedChatIds.add(chatId);
+    }
+  } else {
+    GPM_STATE.bulkSelection.selectedChatIds.clear();
+    GPM_STATE.bulkSelection.selectedChatIds.add(chatId);
+  }
+  gpmRenderTree();
+  gpmUpdateBulkToolbar();
+}
+
+function gpmClearBulkSelection() {
+  GPM_STATE.bulkSelection.active = false;
+  GPM_STATE.bulkSelection.selectedChatIds.clear();
+  gpmRenderTree();
+  gpmUpdateBulkToolbar();
+}
+
+function gpmUpdateBulkToolbar() {
+  const existing = document.querySelector('.gpm-bulk-toolbar');
+  if (existing) existing.remove();
+
+  if (!GPM_STATE.bulkSelection.active || GPM_STATE.bulkSelection.selectedChatIds.size === 0) return;
+
+  const count = GPM_STATE.bulkSelection.selectedChatIds.size;
+  const toolbar = document.createElement('div');
+  toolbar.className = 'gpm-bulk-toolbar';
+  toolbar.innerHTML = `
+    <span class="gpm-bulk-count">${count} ${t('selected')}</span>
+    <button class="gpm-btn gpm-btn-sm" data-action="move">${t('moveSelected')}</button>
+    <button class="gpm-btn gpm-btn-sm" data-action="tag">${t('tagSelected')}</button>
+    <button class="gpm-btn gpm-btn-sm gpm-btn-danger" data-action="delete">${t('delete')}</button>
+    <button class="gpm-btn gpm-btn-sm gpm-btn-secondary" data-action="cancel">${t('cancel')}</button>
+  `;
+  toolbar.addEventListener('click', async (e) => {
+    const action = e.target.dataset.action;
+    if (!action) return;
+    switch (action) {
+      case 'move':
+        break;
+      case 'tag':
+        break;
+      case 'delete':
+        const chatIds = Array.from(GPM_STATE.bulkSelection.selectedChatIds);
+        for (const id of chatIds) await GPMStorage.unassignChat(id);
+        showToast(t('removedChats').replace('{count}', chatIds.length));
+        gpmClearBulkSelection();
+        break;
+      case 'cancel':
+        gpmClearBulkSelection();
+        break;
+    }
+  });
+  if (GPM_STATE.container) GPM_STATE.container.appendChild(toolbar);
+}
+
+async function gpmBulkMoveToProject(targetProjectId) {
+  const chatIds = Array.from(GPM_STATE.bulkSelection.selectedChatIds);
+  for (const chatId of chatIds) await GPMStorage.assignChat(chatId, targetProjectId);
+  showToast(t('movedChats').replace('{count}', chatIds.length));
+  gpmClearBulkSelection();
+}
+
+async function gpmBulkAssignTags(tagIds) {
+  const chatIds = Array.from(GPM_STATE.bulkSelection.selectedChatIds);
+  await TagManager.bulkAssignTags(chatIds, tagIds);
+  showToast(t('taggedChats').replace('{count}', chatIds.length));
+  gpmClearBulkSelection();
+}

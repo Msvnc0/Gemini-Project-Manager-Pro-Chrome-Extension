@@ -62,6 +62,10 @@ const GPM_STATE = {
   _qpMutationObserver: null, // Quick Prompt button MutationObserver instance
   _deletionCheckTimer: null, // Deleted chat detection debounce timer
   _pendingDeletedChatIds: null, // Set of chat IDs pending deletion verification
+  bulkSelection: {
+    active: false,
+    selectedChatIds: new Set(),
+  },
 };
 
 /**
