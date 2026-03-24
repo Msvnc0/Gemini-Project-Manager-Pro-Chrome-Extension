@@ -637,6 +637,162 @@ describe('GPMStorage', () => {
   });
 
   // ══════════════════════════════════════
+  //  Tags Tests
+  // ══════════════════════════════════════
+
+  describe('Tags', () => {
+    it('should create a tag with correct structure', async () => {
+      const tag = await GPMStorage.createTag({ name: 'Important', color: '#ff0000' });
+      expect(tag.name).toBe('Important');
+      expect(tag.color).toBe('#ff0000');
+      expect(tag.count).toBe(0);
+      expect(tag.id).toBeDefined();
+    });
+
+    it('should use default color when not provided', async () => {
+      const tag = await GPMStorage.createTag({ name: 'Default' });
+      expect(tag.color).toBe('#3b82f6');
+    });
+
+    it('should update a tag', async () => {
+      const tag = await GPMStorage.createTag({ name: 'Original' });
+      const updated = await GPMStorage.updateTag(tag.id, { name: 'Updated', color: '#00ff00' });
+      expect(updated.name).toBe('Updated');
+      expect(updated.color).toBe('#00ff00');
+    });
+
+    it('should return null when updating non-existent tag', async () => {
+      const result = await GPMStorage.updateTag('nonexistent', { name: 'X' });
+      expect(result).toBeNull();
+    });
+
+    it('should delete a tag and remove from chats', async () => {
+      const project = await GPMStorage.createProject({ name: 'P' });
+      const tag = await GPMStorage.createTag({ name: 'Test' });
+      await GPMStorage.assignChat('chat-1', project.id);
+      await GPMStorage.assignTagsToChat('chat-1', [tag.id]);
+
+      await GPMStorage.deleteTag(tag.id);
+
+      const tags = await GPMStorage.getTags();
+      expect(tags[tag.id]).toBeUndefined();
+
+      const chatMap = await GPMStorage.getChatMap();
+      expect(chatMap['chat-1'].tags).not.toContain(tag.id);
+    });
+
+    it('should get chats by tag', async () => {
+      const project = await GPMStorage.createProject({ name: 'P' });
+      const tag = await GPMStorage.createTag({ name: 'Tag1' });
+      await GPMStorage.assignChat('chat-1', project.id);
+      await GPMStorage.assignChat('chat-2', project.id);
+      await GPMStorage.assignTagsToChat('chat-1', [tag.id]);
+
+      const chatIds = await GPMStorage.getChatsByTag(tag.id);
+      expect(chatIds).toEqual(['chat-1']);
+    });
+
+    it('should assign tags to a chat', async () => {
+      const project = await GPMStorage.createProject({ name: 'P' });
+      const tag1 = await GPMStorage.createTag({ name: 'T1' });
+      const tag2 = await GPMStorage.createTag({ name: 'T2' });
+      await GPMStorage.assignChat('chat-1', project.id);
+
+      await GPMStorage.assignTagsToChat('chat-1', [tag1.id, tag2.id]);
+
+      const chatMap = await GPMStorage.getChatMap();
+      expect(chatMap['chat-1'].tags).toEqual([tag1.id, tag2.id]);
+
+      const tags = await GPMStorage.getTags();
+      expect(tags[tag1.id].count).toBe(1);
+      expect(tags[tag2.id].count).toBe(1);
+    });
+
+    it('should throw error when assigning more than 5 tags', async () => {
+      const project = await GPMStorage.createProject({ name: 'P' });
+      await GPMStorage.assignChat('chat-1', project.id);
+      const tags = [];
+      for (let i = 0; i < 6; i++) {
+        const tag = await GPMStorage.createTag({ name: `T${i}` });
+        tags.push(tag.id);
+      }
+
+      await expect(GPMStorage.assignTagsToChat('chat-1', tags)).rejects.toThrow('Maximum 5 tags allowed per chat');
+    });
+
+    it('should throw error when chat not found', async () => {
+      const tag = await GPMStorage.createTag({ name: 'T' });
+      await expect(GPMStorage.assignTagsToChat('nonexistent', [tag.id])).rejects.toThrow('Chat not found in chatMap');
+    });
+
+    it('should update tag counts when replacing tags', async () => {
+      const project = await GPMStorage.createProject({ name: 'P' });
+      const tag1 = await GPMStorage.createTag({ name: 'T1' });
+      const tag2 = await GPMStorage.createTag({ name: 'T2' });
+      await GPMStorage.assignChat('chat-1', project.id);
+
+      await GPMStorage.assignTagsToChat('chat-1', [tag1.id]);
+      await GPMStorage.assignTagsToChat('chat-1', [tag2.id]);
+
+      const tags = await GPMStorage.getTags();
+      expect(tags[tag1.id].count).toBe(0);
+      expect(tags[tag2.id].count).toBe(1);
+    });
+
+    it('should remove tag from chat', async () => {
+      const project = await GPMStorage.createProject({ name: 'P' });
+      const tag = await GPMStorage.createTag({ name: 'T' });
+      await GPMStorage.assignChat('chat-1', project.id);
+      await GPMStorage.assignTagsToChat('chat-1', [tag.id]);
+
+      await GPMStorage.removeTagFromChat('chat-1', tag.id);
+
+      const chatMap = await GPMStorage.getChatMap();
+      expect(chatMap['chat-1'].tags).not.toContain(tag.id);
+
+      const tags = await GPMStorage.getTags();
+      expect(tags[tag.id].count).toBe(0);
+    });
+  });
+
+  // ══════════════════════════════════════
+  //  Starred Chats Tests
+  // ══════════════════════════════════════
+
+  describe('Starred Chats', () => {
+    it('should toggle star on a chat', async () => {
+      const project = await GPMStorage.createProject({ name: 'P' });
+      await GPMStorage.assignChat('chat-1', project.id);
+
+      const starredAt = await GPMStorage.toggleStarChat('chat-1');
+      expect(starredAt).toBeTruthy();
+
+      const unstarred = await GPMStorage.toggleStarChat('chat-1');
+      expect(unstarred).toBeNull();
+    });
+
+    it('should return null for non-existent chat when toggling star', async () => {
+      const result = await GPMStorage.toggleStarChat('nonexistent');
+      expect(result).toBeNull();
+    });
+
+    it('should get starred chats sorted by starredAt', async () => {
+      const project = await GPMStorage.createProject({ name: 'P' });
+      await GPMStorage.assignChat('chat-1', project.id);
+      await GPMStorage.assignChat('chat-2', project.id);
+
+      await GPMStorage.toggleStarChat('chat-1');
+      await new Promise((r) => setTimeout(r, 10));
+      await GPMStorage.toggleStarChat('chat-2');
+
+      const starred = await GPMStorage.getStarredChats();
+      expect(starred).toHaveLength(2);
+      expect(starred[0].chatId).toBe('chat-2');
+      expect(starred[1].chatId).toBe('chat-1');
+    });
+  });
+
+  // ══════════════════════════════════════
   //  Concurrent Writes (_withLock) Tests
   // ══════════════════════════════════════
 

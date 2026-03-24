@@ -15,7 +15,9 @@
   --gpm-danger: #f28b82;
   --gpm-radius: 12px;
   --gpm-radius-sm: 8px;
-  --gpm-font: 'Google Sans', 'Noto Sans Arabic', 'Noto Sans KR', 'Noto Sans Devanagari', 'Apple SD Gothic Neo', 'Malgun Gothic', 'Mangal', 'Tahoma', 'Segoe UI', system-ui, sans-serif;
+  --gpm-font:
+    'Google Sans', 'Noto Sans Arabic', 'Noto Sans KR', 'Noto Sans Devanagari', 'Apple SD Gothic Neo', 'Malgun Gothic',
+    'Mangal', 'Tahoma', 'Segoe UI', system-ui, sans-serif;
   --gpm-transition: 150ms cubic-bezier(0.2, 0, 0, 1);
 
   display: block !important;
@@ -40,7 +42,9 @@
   --gpm-danger: #d93025;
 }
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -91,7 +95,9 @@
   background: transparent;
   color: var(--gpm-text-secondary);
   cursor: pointer;
-  transition: background var(--gpm-transition), color var(--gpm-transition);
+  transition:
+    background var(--gpm-transition),
+    color var(--gpm-transition);
   font-size: 15px;
   line-height: 1;
   padding: 0;
@@ -221,21 +227,21 @@
 
 /* ── Drag & Drop ── */
 .gpm-tree-row.gpm-drag-over,
-[data-gpm="item"].gpm-drag-over,
-[data-gpm="chat"].gpm-drag-over {
+[data-gpm='item'].gpm-drag-over,
+[data-gpm='chat'].gpm-drag-over {
   outline: 2px solid var(--gpm-accent);
   outline-offset: -2px;
   background: color-mix(in srgb, var(--gpm-accent) 10%, transparent);
 }
 
 /* Top/bottom reorder indicators */
-[data-gpm="item"].gpm-drag-top,
-[data-gpm="chat"].gpm-drag-top {
+[data-gpm='item'].gpm-drag-top,
+[data-gpm='chat'].gpm-drag-top {
   border-top: 2px solid var(--gpm-accent);
 }
 
-[data-gpm="item"].gpm-drag-bottom,
-[data-gpm="chat"].gpm-drag-bottom {
+[data-gpm='item'].gpm-drag-bottom,
+[data-gpm='chat'].gpm-drag-bottom {
   border-bottom: 2px solid var(--gpm-accent);
 }
 
@@ -257,8 +263,12 @@
 }
 
 @keyframes gpm-fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .gpm-modal {
@@ -275,8 +285,14 @@
 }
 
 @keyframes gpm-scale-in {
-  from { transform: scale(0.95); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .gpm-modal-title {
@@ -350,7 +366,9 @@
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: background var(--gpm-transition), color var(--gpm-transition);
+  transition:
+    background var(--gpm-transition),
+    color var(--gpm-transition);
 }
 
 .gpm-btn-primary {
@@ -401,7 +419,9 @@
   border-radius: 50%;
   border: 2px solid transparent;
   cursor: pointer;
-  transition: border-color var(--gpm-transition), transform var(--gpm-transition);
+  transition:
+    border-color var(--gpm-transition),
+    transform var(--gpm-transition);
 }
 
 .gpm-color-swatch:hover {
@@ -538,8 +558,14 @@
 }
 
 @keyframes gpm-slide-up {
-  from { transform: translateX(-50%) translateY(8px); opacity: 0; }
-  to { transform: translateX(-50%) translateY(0); opacity: 1; }
+  from {
+    transform: translateX(-50%) translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
 }
 
 .gpm-qp-header {
@@ -641,7 +667,9 @@
   cursor: pointer;
   flex-shrink: 0;
   opacity: 0;
-  transition: opacity var(--gpm-transition), background var(--gpm-transition);
+  transition:
+    opacity var(--gpm-transition),
+    background var(--gpm-transition);
 }
 
 .gpm-qp-card:hover .gpm-qp-card-edit,
@@ -668,7 +696,10 @@
   cursor: pointer;
   flex-shrink: 0;
   opacity: 0;
-  transition: opacity var(--gpm-transition), background var(--gpm-transition), color var(--gpm-transition);
+  transition:
+    opacity var(--gpm-transition),
+    background var(--gpm-transition),
+    color var(--gpm-transition);
 }
 
 .gpm-qp-card-delete:hover {
@@ -698,7 +729,9 @@
   background: transparent;
   color: var(--gpm-text-secondary);
   cursor: pointer;
-  transition: background var(--gpm-transition), color var(--gpm-transition);
+  transition:
+    background var(--gpm-transition),
+    color var(--gpm-transition);
 }
 
 .gpm-qp-footer-btn:hover {
@@ -771,7 +804,9 @@
   background: transparent;
   color: var(--gpm-text-secondary);
   cursor: pointer;
-  transition: background var(--gpm-transition), color var(--gpm-transition);
+  transition:
+    background var(--gpm-transition),
+    color var(--gpm-transition);
   font-size: 20px;
 }
 
@@ -945,57 +980,319 @@
    RTL SUPPORT — Arabic and other right-to-left languages
    ═══════════════════════════════════════════════════════ */
 
-:host([dir="rtl"]) {
+:host([dir='rtl']) {
   direction: rtl;
   text-align: right;
 }
 
 /* Chevron rotation mirroring for RTL */
-:host([dir="rtl"]) .gpm-tree-chevron {
+:host([dir='rtl']) .gpm-tree-chevron {
   transform: rotate(180deg);
 }
 
-:host([dir="rtl"]) .gpm-tree-chevron.gpm-expanded {
+:host([dir='rtl']) .gpm-tree-chevron.gpm-expanded {
   transform: rotate(90deg);
 }
 
 /* Submenu opens to the left in RTL */
-:host([dir="rtl"]) .gpm-context-submenu-list {
+:host([dir='rtl']) .gpm-context-submenu-list {
   inset-inline-start: auto;
   inset-inline-end: 100%;
 }
 
 /* Submenu arrow direction */
-:host([dir="rtl"]) .gpm-context-item span[style*="marginLeft"] {
+:host([dir='rtl']) .gpm-context-item span[style*='marginLeft'] {
   margin-left: 0;
   margin-right: auto;
 }
 
 /* Button row alignment */
-:host([dir="rtl"]) .gpm-btn-row {
+:host([dir='rtl']) .gpm-btn-row {
   justify-content: flex-start;
 }
 
 /* Context menu text alignment */
-:host([dir="rtl"]) .gpm-context-item {
+:host([dir='rtl']) .gpm-context-item {
   text-align: right;
 }
 
 /* Quick prompts panel positioning unchanged (centered) */
 
 /* Prompt card layout */
-:host([dir="rtl"]) .gpm-qp-card-edit,
-:host([dir="rtl"]) .gpm-qp-card-delete {
+:host([dir='rtl']) .gpm-qp-card-edit,
+:host([dir='rtl']) .gpm-qp-card-delete {
   order: -1;
 }
 
 /* Footer alignment */
-:host([dir="rtl"]) .gpm-qp-footer {
+:host([dir='rtl']) .gpm-qp-footer {
   justify-content: flex-start;
 }
 
 /* FAB margin mirroring */
-:host([dir="rtl"]) .gpm-qp-fab {
+:host([dir='rtl']) .gpm-qp-fab {
   margin-inline-start: 0;
   margin-inline-end: 4px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   V2.0 NEW STYLES — Tags, Favorites, Selection, Templates
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Tag Badge ── */
+.gpm-tag-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  white-space: nowrap;
+  margin-right: 4px;
+}
+
+/* ── Favorite Star ── */
+.gpm-favorite-star {
+  color: #fdd663;
+  margin-right: 4px;
+}
+
+.gpm-favorite-star-empty {
+  color: var(--gpm-text-secondary);
+  opacity: 0.4;
+  margin-right: 4px;
+}
+
+/* ── Selection Mode ── */
+.gpm-selection-mode [data-gpm='item'],
+.gpm-selection-mode [data-gpm='chat'] {
+  cursor: pointer;
+}
+
+.gpm-selection-checkbox {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.gpm-selected {
+  background: color-mix(in srgb, var(--gpm-accent) 12%, transparent) !important;
+}
+
+/* ── Selection Toolbar ── */
+.gpm-selection-toolbar {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--gpm-bg-elevated);
+  border: 1px solid var(--gpm-border);
+  border-radius: 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  z-index: 10000;
+}
+
+.gpm-selection-count {
+  font-size: 13px;
+  color: var(--gpm-text);
+  margin-right: 8px;
+}
+
+/* ── Template Dialog ── */
+.gpm-template-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.gpm-template-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 8px;
+  background: var(--gpm-bg);
+  border: 1px solid var(--gpm-border);
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    background var(--gpm-transition),
+    border-color var(--gpm-transition);
+}
+
+.gpm-template-item:hover {
+  background: var(--gpm-bg-hover);
+  border-color: var(--gpm-accent);
+}
+
+/* ── Backup Panel ── */
+.gpm-backup-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  margin-bottom: 8px;
+  background: var(--gpm-bg);
+  border: 1px solid var(--gpm-border);
+  border-radius: 8px;
+  transition: background var(--gpm-transition);
+}
+
+.gpm-backup-item:hover {
+  background: var(--gpm-bg-hover);
+}
+
+/* ── Sort Dropdown ── */
+.gpm-sort-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.gpm-sort-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  min-width: 160px;
+  background: var(--gpm-bg-elevated);
+  border: 1px solid var(--gpm-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  z-index: 10001;
+  padding: 4px;
+}
+
+.gpm-sort-option {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: var(--gpm-text);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background var(--gpm-transition);
+}
+
+.gpm-sort-option:hover {
+  background: var(--gpm-bg-hover);
+}
+
+.gpm-sort-option.gpm-active {
+  background: color-mix(in srgb, var(--gpm-accent) 12%, transparent);
+  color: var(--gpm-accent);
+}
+
+/* ── Undo/Redo Toast ── */
+.gpm-toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: var(--gpm-bg-elevated);
+  border: 1px solid var(--gpm-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  z-index: 10000;
+  animation: gpm-toast-in 200ms ease;
+}
+
+@keyframes gpm-toast-in {
+  from {
+    transform: translateX(-50%) translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
+.gpm-toast-message {
+  font-size: 13px;
+  color: var(--gpm-text);
+}
+
+.gpm-toast-action {
+  padding: 6px 12px;
+  background: var(--gpm-accent);
+  color: #1e1f20;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--gpm-transition);
+}
+
+.gpm-toast-action:hover {
+  background: var(--gpm-accent-hover);
+}
+
+/* ── Keyboard Shortcut Hint ── */
+.gpm-shortcut-hint {
+  font-size: 11px;
+  color: var(--gpm-text-secondary);
+  background: var(--gpm-bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: auto;
+}
+
+/* ── Gap Utilities ── */
+.gpm-gap-8 {
+  gap: 8px;
+}
+
+.gpm-gap-12 {
+  gap: 12px;
+}
+
+/* ── Small Button ── */
+.gpm-btn-sm {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+/* ── Input Styles ── */
+.gpm-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--gpm-border);
+  border-radius: 8px;
+  background: var(--gpm-bg);
+  color: var(--gpm-text);
+  font-family: var(--gpm-font);
+  font-size: 13px;
+  outline: none;
+  transition: border-color var(--gpm-transition);
+}
+
+.gpm-input:focus {
+  border-color: var(--gpm-accent);
+}
+
+/* ── Field Container ── */
+.gpm-field {
+  margin-bottom: 16px;
+}
+
+.gpm-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gpm-text-secondary);
+  margin-bottom: 4px;
 }

@@ -215,6 +215,31 @@ function gpmDetectDeletedChats() {
 
     gpmLog('Deletion check: Confirmed deleted chats:', confirmedDeleted);
 
+    // 🛡️ SAFETY: Require user confirmation for bulk deletions (3+ chats)
+    if (confirmedDeleted.length >= 3) {
+      const confirmed = await new Promise((resolve) => {
+        if (!GPM_STATE.modalRoot) {
+          resolve(true);
+          return;
+        }
+        GPMUI.showConfirmDialog(GPM_STATE.modalRoot, {
+          title: t('confirmDeletion') || 'Confirm Deletion',
+          message: (
+            t('deletedChatsConfirm') || '{count} chats appear to be deleted from Gemini. Remove them from folders?'
+          ).replace('{count}', confirmedDeleted.length),
+          confirmText: t('delete') || 'Delete',
+          danger: true,
+          onConfirm: () => resolve(true),
+          onCancel: () => resolve(false),
+        });
+      });
+
+      if (!confirmed) {
+        gpmLog('Deletion cancelled by user');
+        return;
+      }
+    }
+
     // ── Step 5: Remove confirmed orphaned chats from storage ──
     let storageUpdated = false;
     const confirmedSet = new Set(confirmedDeleted);

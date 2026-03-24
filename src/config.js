@@ -25,11 +25,11 @@ const GPM_CONFIG = {
   SYNC_DEBOUNCE: 300,
   ENHANCE_DEBOUNCE: 500,
   QP_BUTTON_CHECK: 1000,
-  HEALTH_CHECK_INTERVAL: 5000,  // DOM health check every 5 seconds
-  REINIT_DEBOUNCE: 1000,        // Debounce for re-initialization attempts
-  MAX_REINIT_FAILURES: 3,       // Max consecutive re-init failures before backing off
-  DELETION_CHECK_DEBOUNCE: 2000,  // Debounce for deleted chat detection (ms)
-  DEBUG: false  // Set to true to enable console logging
+  HEALTH_CHECK_INTERVAL: 5000, // DOM health check every 5 seconds
+  REINIT_DEBOUNCE: 1000, // Debounce for re-initialization attempts
+  MAX_REINIT_FAILURES: 3, // Max consecutive re-init failures before backing off
+  DELETION_CHECK_DEBOUNCE: 2000, // Debounce for deleted chat detection (ms)
+  DEBUG: false, // Set to true to enable console logging
 };
 
 // ── Debug Logger — only logs when GPM_CONFIG.DEBUG is true ──
@@ -45,23 +45,23 @@ function gpmError(...args) {
 
 // ── Centralized State (GPM_STATE) ──
 const GPM_STATE = {
-  container: null,              // The injected <div data-gpm="root"> in sidebar
-  modalHost: null,              // Shadow DOM host for modals/overlays only
-  modalRoot: null,              // Shadow root for modals
+  container: null, // The injected <div data-gpm="root"> in sidebar
+  modalHost: null, // Shadow DOM host for modals/overlays only
+  modalRoot: null, // Shadow root for modals
   initialized: false,
   pendingChatAssignment: null,
   styleInjected: false,
   enhanceAbortController: null, // AbortController for native chat item listeners
-  aliasResolveTimer: null,      // Debounced alias resolver timer
-  qpOpen: false,                // Quick Prompts panel open state
-  syncTimeout: null,            // Cross-tab sync debounce timer
-  healthCheckTimer: null,       // DOM health monitor interval ID
-  reinitDebounceTimer: null,    // Re-initialization debounce timer
-  reinitFailCount: 0,           // Consecutive re-init failure counter
-  _qpCheckInterval: null,       // Quick Prompt button check interval ID
-  _qpMutationObserver: null,    // Quick Prompt button MutationObserver instance
-  _deletionCheckTimer: null,    // Deleted chat detection debounce timer
-  _pendingDeletedChatIds: null  // Set of chat IDs pending deletion verification
+  aliasResolveTimer: null, // Debounced alias resolver timer
+  qpOpen: false, // Quick Prompts panel open state
+  syncTimeout: null, // Cross-tab sync debounce timer
+  healthCheckTimer: null, // DOM health monitor interval ID
+  reinitDebounceTimer: null, // Re-initialization debounce timer
+  reinitFailCount: 0, // Consecutive re-init failure counter
+  _qpCheckInterval: null, // Quick Prompt button check interval ID
+  _qpMutationObserver: null, // Quick Prompt button MutationObserver instance
+  _deletionCheckTimer: null, // Deleted chat detection debounce timer
+  _pendingDeletedChatIds: null, // Set of chat IDs pending deletion verification
 };
 
 /**
@@ -127,19 +127,79 @@ function gpmIsContextValid() {
 
 /**
  * Extract chat ID from a URL, href, or path string.
- * Supports both new format (/app/<id>) and legacy formats (/chat/<id>, /c/<id>).
+ * Supports multiple formats for maximum compatibility with Gemini URL changes.
+ *
+ * Supported formats:
+ *   - /app/<chatId>           (current Gemini format)
+ *   - /chat/<chatId>          (legacy format)
+ *   - /c/<chatId>             (short format)
+ *   - ?chat=<chatId>          (query parameter)
+ *   - #/chat/<chatId>         (hash-based routing)
+ *   - UUID pattern anywhere   (fallback for new formats)
+ *   - Long alphanumeric       (fallback for chat-like IDs)
+ *
  * @param {string} urlOrHref — Full URL, relative href, or pathname
  * @returns {string|null} — The extracted chat ID or null if not found
  */
 function extractChatIdFromUrl(urlOrHref) {
   if (!urlOrHref || typeof urlOrHref !== 'string') return null;
-  // New format: /app/<chatId>
+
+  // Format 1: /app/<chatId> (current Gemini format)
   const appMatch = urlOrHref.match(/\/app\/([a-zA-Z0-9_-]+)/);
   if (appMatch) return appMatch[1];
-  // Legacy formats: /chat/<chatId> or /c/<chatId>
-  const legacyMatch = urlOrHref.match(/\/(?:chat|c)\/([a-zA-Z0-9_-]+)/);
-  if (legacyMatch) return legacyMatch[1];
+
+  // Format 2: /chat/<chatId> (legacy format)
+  const chatMatch = urlOrHref.match(/\/chat\/([a-zA-Z0-9_-]+)/);
+  if (chatMatch) return chatMatch[1];
+
+  // Format 3: /c/<chatId> (short format)
+  const shortMatch = urlOrHref.match(/\/c\/([a-zA-Z0-9_-]+)/);
+  if (shortMatch) return shortMatch[1];
+
+  // Format 4: ?chat=<chatId> (query parameter)
+  const queryMatch = urlOrHref.match(/[?&]chat=([a-zA-Z0-9_-]+)/);
+  if (queryMatch) return queryMatch[1];
+
+  // Format 5: #/chat/<chatId> (hash-based routing)
+  const hashMatch = urlOrHref.match(/#\/chat\/([a-zA-Z0-9_-]+)/);
+  if (hashMatch) return hashMatch[1];
+
+  // Format 6: UUID pattern (standard UUID v4)
+  const uuidMatch = urlOrHref.match(/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i);
+  if (uuidMatch) return uuidMatch[1];
+
+  // Format 7: Long alphanumeric string (20+ chars) that looks like a chat ID
+  // This is a fallback for new/unknown formats
+  const fallbackMatch = urlOrHref.match(/\/([a-zA-Z0-9_-]{20,})(?:\/|$|\?|#)/);
+  if (fallbackMatch) return fallbackMatch[1];
+
   return null;
+}
+
+/**
+ * Validate if a chat ID exists in Gemini's sidebar.
+ * Used to verify chat existence before deletion detection.
+ *
+ * @param {string} chatId — The chat ID to validate
+ * @returns {Promise<boolean>} — True if chat exists in sidebar
+ */
+async function validateChatIdExists(chatId) {
+  if (!chatId) return false;
+
+  const sidebar = gpmQuerySelector ? gpmQuerySelector('sidebar') : document.querySelector(GPM_SELECTORS.sidebar);
+  if (!sidebar) return false; // Cannot verify without sidebar
+
+  const links = sidebar.querySelectorAll('a[href^="/app/"], a[href^="/chat/"], a[href^="/c/"]');
+
+  for (const link of links) {
+    const href = link.getAttribute('href') || '';
+    const extractedId = extractChatIdFromUrl(href);
+    if (extractedId === chatId) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /**
@@ -154,9 +214,15 @@ function gpmWaitForElement(selector, timeout = 10000) {
     if (el) return resolve(el);
     const observer = new MutationObserver((_, obs) => {
       const found = document.querySelector(selector);
-      if (found) { obs.disconnect(); resolve(found); }
+      if (found) {
+        obs.disconnect();
+        resolve(found);
+      }
     });
     observer.observe(document.body, { childList: true, subtree: true });
-    setTimeout(() => { observer.disconnect(); resolve(null); }, timeout);
+    setTimeout(() => {
+      observer.disconnect();
+      resolve(null);
+    }, timeout);
   });
 }

@@ -566,6 +566,24 @@ function gpmCreateProjectRow(project, allProjects, chatMap) {
     if (chatId && chatId.trim() && !chatId.startsWith('http')) {
       const cleanId = chatId.trim();
       const chatTitle = e.dataTransfer.getData('text/gpm-chat-title');
+
+      // 🛡️ Duplicate check - warn if chat already in another project
+      const duplicateInfo = GPMValidators.findDuplicateChat(cleanId, allProjects, chatMap);
+      if (duplicateInfo && duplicateInfo.projectId !== project.id) {
+        const confirmMove = await new Promise((resolve) => {
+          GPMUI.showConfirmDialog(GPM_STATE.modalRoot, {
+            title: t('moveChat') || 'Move Chat',
+            message: (
+              t('chatAlreadyInProject') || 'This chat is already in "{project}". Move it here instead?'
+            ).replace('{project}', duplicateInfo.projectName),
+            confirmText: t('move') || 'Move',
+            onConfirm: () => resolve(true),
+            onCancel: () => resolve(false),
+          });
+        });
+        if (!confirmMove) return;
+      }
+
       await GPMStorage.assignChat(cleanId, project.id);
       if (chatTitle) {
         const cm = await GPMStorage.getChatMap();
@@ -718,6 +736,8 @@ function gpmShowProjectContextMenu(x, y, project, allProjects) {
     return;
   }
 
+  const isFavorite = typeof GPMFavoritesManager !== 'undefined' && GPMFavoritesManager.isFavorite(project.id);
+
   GPMUI.showContextMenu(GPM_STATE.modalRoot, {
     x,
     y,
@@ -745,6 +765,17 @@ function gpmShowProjectContextMenu(x, y, project, allProjects) {
             },
             onCancel: () => {},
           });
+        },
+      },
+      { divider: true },
+      {
+        icon: isFavorite ? '⭐' : '☆',
+        label: isFavorite ? t('removeFromFavorites') : t('addToFavorites'),
+        action: async () => {
+          if (typeof GPMFavoritesManager !== 'undefined') {
+            await GPMFavoritesManager.toggleFavorite(project.id);
+            gpmRenderTree();
+          }
         },
       },
       { divider: true },
@@ -777,6 +808,14 @@ function gpmShowProjectContextMenu(x, y, project, allProjects) {
             confirmText: t('delete'),
             danger: true,
             onConfirm: async () => {
+              if (typeof GPMHistory !== 'undefined') {
+                const action = GPMHistory.createAction('delete_project', {
+                  projectId: project.id,
+                  projectData: project,
+                  chatMapData: {},
+                });
+                GPMHistory.push(action);
+              }
               await GPMStorage.deleteProject(project.id);
               gpmRenderTree();
             },
@@ -795,50 +834,88 @@ function gpmShowChatContextMenu(x, y, chatId, mapping, allProjects) {
     icon: p.icon,
     label: p.name,
     action: async () => {
+      const oldProjectId = mapping?.projectId;
+
+      if (typeof GPMHistory !== 'undefined' && oldProjectId) {
+        const action = GPMHistory.createAction('move_chat', {
+          chatId,
+          fromProjectId: oldProjectId,
+          toProjectId: p.id,
+        });
+        GPMHistory.push(action);
+      }
+
       await GPMStorage.assignChat(chatId, p.id);
       gpmRenderTree();
     },
   }));
 
-  GPMUI.showContextMenu(GPM_STATE.modalRoot, {
-    x,
-    y,
-    items: [
-      {
-        icon: isPinned ? '📌' : '📍',
-        label: isPinned ? t('unpinChat') : t('pinChat'),
-        action: async () => {
-          await GPMStorage.togglePinChat(chatId);
-          gpmRenderTree();
-        },
+  const items = [
+    {
+      icon: isPinned ? '📌' : '📍',
+      label: isPinned ? t('unpinChat') : t('pinChat'),
+      action: async () => {
+        await GPMStorage.togglePinChat(chatId);
+        gpmRenderTree();
       },
-      {
-        icon: '✏️',
-        label: t('renameChat'),
-        action: () => {
-          GPMUI.createRenameModal(GPM_STATE.modalRoot, {
-            currentName: mapping?.alias || chatId,
-            onSave: async (n) => {
-              await GPMStorage.setChatAlias(chatId, n);
-              gpmRenderTree();
-            },
-            onCancel: () => {},
-          });
-        },
+    },
+    {
+      icon: '✏️',
+      label: t('renameChat'),
+      action: () => {
+        GPMUI.createRenameModal(GPM_STATE.modalRoot, {
+          currentName: mapping?.alias || chatId,
+          onSave: async (n) => {
+            if (typeof GPMHistory !== 'undefined') {
+              const action = GPMHistory.createAction('rename_chat', {
+                chatId,
+                oldAlias: mapping?.alias || chatId,
+                newAlias: n,
+              });
+              GPMHistory.push(action);
+            }
+            await GPMStorage.setChatAlias(chatId, n);
+            gpmRenderTree();
+          },
+          onCancel: () => {},
+        });
       },
-      { icon: '📂', label: t('moveToProject'), submenu: moveSubmenu },
-      { divider: true },
-      {
-        icon: '🗑️',
-        label: t('removeFromProject'),
-        danger: true,
-        action: async () => {
-          await GPMStorage.unassignChat(chatId);
-          gpmRenderTree();
-        },
-      },
-    ],
+    },
+    { icon: '📂', label: t('moveToProject'), submenu: moveSubmenu },
+  ];
+
+  // Tags submenu (if tags manager is available)
+  if (typeof GPMTagsManager !== 'undefined') {
+    items.push({ divider: true });
+    items.push({
+      icon: '🏷️',
+      label: t('tags'),
+      submenu: [
+        { icon: '+', label: t('addTag'), action: () => {} },
+        ...GPMTagsManager.DEFAULT_TAGS.slice(0, 5).map((tag) => ({
+          icon: tag.icon,
+          label: tag.name,
+          action: async () => {
+            await GPMTagsManager.addTagToChat(chatId, tag.id);
+            gpmRenderTree();
+          },
+        })),
+      ],
+    });
+  }
+
+  items.push({ divider: true });
+  items.push({
+    icon: '🗑️',
+    label: t('removeFromProject'),
+    danger: true,
+    action: async () => {
+      await GPMStorage.unassignChat(chatId);
+      gpmRenderTree();
+    },
   });
+
+  GPMUI.showContextMenu(GPM_STATE.modalRoot, { x, y, items });
 }
 
 // ══════════════════════════════════════
@@ -849,10 +926,32 @@ function gpmShowCreateProjectModal() {
   if (!GPM_STATE.modalRoot) return;
   GPMUI.createProjectModal(GPM_STATE.modalRoot, {
     onSave: async ({ name, icon, color }) => {
-      await GPMStorage.createProject({ name, icon, color });
+      const project = await GPMStorage.createProject({ name, icon, color });
+      if (typeof GPMHistory !== 'undefined') {
+        const action = GPMHistory.createAction('create_project', {
+          projectId: project.id,
+          projectData: project,
+        });
+        GPMHistory.push(action);
+      }
+      if (typeof GPMUsageTracker !== 'undefined') {
+        GPMUsageTracker.trackFeatureUsage('create_project');
+      }
       gpmRenderTree();
     },
     onCancel: () => {},
+  });
+}
+
+function gpmShowTemplateDialog() {
+  if (!GPM_STATE.modalRoot) return;
+  GPMUI.showTemplateDialog(GPM_STATE.modalRoot, async (templateId) => {
+    if (typeof applyTemplate !== 'undefined') {
+      await applyTemplate(templateId);
+      if (typeof GPMUsageTracker !== 'undefined') {
+        GPMUsageTracker.trackFeatureUsage('template_' + templateId);
+      }
+    }
   });
 }
 
