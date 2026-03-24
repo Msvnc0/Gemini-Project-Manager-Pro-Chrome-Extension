@@ -4,5 +4,62 @@
   },
   "extensionDescription": {
     "message": "เปลี่ยนแถบด้านข้างของ Gemini ให้เป็นพื้นที่ทำงานระดับมืออาชีพพร้อมโปรเจกต์ โฟลเดอร์ และคำสั่งด่วน"
+  },
+  "tags": {
+    "message": "แท็ก"
+  },
+  "createTag": {
+    "message": "สร้างแท็ก"
+  },
+  "tagName": {
+    "message": "ชื่อแท็ก"
+  },
+  "tagNamePlaceholder": {
+    "message": "กรอกชื่อแท็ก..."
+  },
+  "tagColor": {
+    "message": "สีแท็ก"
+  },
+  "noTags": {
+    "message": "ยังไม่มีแท็ก"
+  },
+  "maxTagsReached": {
+    "message": "สูงสุด 5 แท็กต่อแชท"
+  },
+  "favorites": {
+    "message": "ที่ติดดาว"
+  },
+  "starred": {
+    "message": "ติดดาว"
+  },
+  "unstarred": {
+    "message": "ถอนดาว"
+  },
+  "bulkSelection": {
+    "message": "การเลือกหลายรายการ"
+  },
+  "selected": {
+    "message": "ที่เลือก"
+  },
+  "moveSelected": {
+    "message": "ย้ายที่เลือก"
+  },
+  "tagSelected": {
+    "message": "แท็กที่เลือก"
+  },
+  "deleteSelected": {
+    "message": "ลบที่เลือก"
+  },
+  "movedChats": {
+    "message": "ย้าย {count} แชทแล้ว"
+  },
+  "taggedChats": {
+    "message": "แท็ก {count} แชทแล้ว"
+  },
+  "removedChats": {
+    "message": "ลบ {count} แชทแล้ว"
+  },
+  "bulkLimitReached": {
+    "message": "สามารถเลือกแชทได้สูงสุด 50 แชท"
   }
 }

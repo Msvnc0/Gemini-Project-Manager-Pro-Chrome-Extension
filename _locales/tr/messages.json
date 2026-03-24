@@ -4,5 +4,62 @@
   },
   "extensionDescription": {
     "message": "Gemini kenar çubuğunu projeler, klasörler ve hızlı komutlarla profesyonel bir çalışma alanına dönüştürün."
+  },
+  "tags": {
+    "message": "Etiketler"
+  },
+  "createTag": {
+    "message": "Etiket Oluştur"
+  },
+  "tagName": {
+    "message": "Etiket Adı"
+  },
+  "tagNamePlaceholder": {
+    "message": "Etiket adı girin..."
+  },
+  "tagColor": {
+    "message": "Etiket Rengi"
+  },
+  "noTags": {
+    "message": "Henüz etiket yok"
+  },
+  "maxTagsReached": {
+    "message": "Her chat için maksimum 5 etiket"
+  },
+  "favorites": {
+    "message": "Yıldızlılar"
+  },
+  "starred": {
+    "message": "Yıldızla"
+  },
+  "unstarred": {
+    "message": "Yıldızı Kaldır"
+  },
+  "bulkSelection": {
+    "message": "Toplu Seçim"
+  },
+  "selected": {
+    "message": "seçildi"
+  },
+  "moveSelected": {
+    "message": "Seçili olanları taşı"
+  },
+  "tagSelected": {
+    "message": "Seçili olanları etiketle"
+  },
+  "deleteSelected": {
+    "message": "Seçili olanları sil"
+  },
+  "movedChats": {
+    "message": "{count} chat taşındı"
+  },
+  "taggedChats": {
+    "message": "{count} chat etiketlendi"
+  },
+  "removedChats": {
+    "message": "{count} chat kaldırıldı"
+  },
+  "bulkLimitReached": {
+    "message": "Maksimum 50 chat seçilebilir"
   }
 }

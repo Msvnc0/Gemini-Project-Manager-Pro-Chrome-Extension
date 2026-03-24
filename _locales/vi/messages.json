@@ -4,5 +4,62 @@
   },
   "extensionDescription": {
     "message": "Biến thanh bên Gemini thành không gian làm việc chuyên nghiệp với dự án, thư mục và lệnh nhanh."
+  },
+  "tags": {
+    "message": "Thẻ"
+  },
+  "createTag": {
+    "message": "Tạo thẻ"
+  },
+  "tagName": {
+    "message": "Tên thẻ"
+  },
+  "tagNamePlaceholder": {
+    "message": "Nhập tên thẻ..."
+  },
+  "tagColor": {
+    "message": "Màu thẻ"
+  },
+  "noTags": {
+    "message": "Chưa có thẻ"
+  },
+  "maxTagsReached": {
+    "message": "Tối đa 5 thẻ mỗi cuộc trò chuyện"
+  },
+  "favorites": {
+    "message": "Đã gắn sao"
+  },
+  "starred": {
+    "message": "Gắn sao"
+  },
+  "unstarred": {
+    "message": "Bỏ gắn sao"
+  },
+  "bulkSelection": {
+    "message": "Chọn nhiều"
+  },
+  "selected": {
+    "message": "đã chọn"
+  },
+  "moveSelected": {
+    "message": "Di chuyển đã chọn"
+  },
+  "tagSelected": {
+    "message": "Gắn thẻ đã chọn"
+  },
+  "deleteSelected": {
+    "message": "Xóa đã chọn"
+  },
+  "movedChats": {
+    "message": "Đã di chuyển {count} cuộc trò chuyện"
+  },
+  "taggedChats": {
+    "message": "Đã gắn thẻ {count} cuộc trò chuyện"
+  },
+  "removedChats": {
+    "message": "Đã xóa {count} cuộc trò chuyện"
+  },
+  "bulkLimitReached": {
+    "message": "Tối đa 50 cuộc trò chuyện có thể được chọn"
   }
 }

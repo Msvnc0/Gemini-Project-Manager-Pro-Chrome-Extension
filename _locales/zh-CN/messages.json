@@ -4,5 +4,62 @@
   },
   "extensionDescription": {
     "message": "将 Gemini 侧边栏转变为具有项目、文件夹和快速命令的专业工作空间。"
+  },
+  "tags": {
+    "message": "标签"
+  },
+  "createTag": {
+    "message": "创建标签"
+  },
+  "tagName": {
+    "message": "标签名称"
+  },
+  "tagNamePlaceholder": {
+    "message": "输入标签名称..."
+  },
+  "tagColor": {
+    "message": "标签颜色"
+  },
+  "noTags": {
+    "message": "暂无标签"
+  },
+  "maxTagsReached": {
+    "message": "每个对话最多5个标签"
+  },
+  "favorites": {
+    "message": "已加星标"
+  },
+  "starred": {
+    "message": "加星标"
+  },
+  "unstarred": {
+    "message": "取消星标"
+  },
+  "bulkSelection": {
+    "message": "批量选择"
+  },
+  "selected": {
+    "message": "已选择"
+  },
+  "moveSelected": {
+    "message": "移动所选"
+  },
+  "tagSelected": {
+    "message": "标签所选"
+  },
+  "deleteSelected": {
+    "message": "删除所选"
+  },
+  "movedChats": {
+    "message": "已移动 {count} 个对话"
+  },
+  "taggedChats": {
+    "message": "已标记 {count} 个对话"
+  },
+  "removedChats": {
+    "message": "已删除 {count} 个对话"
+  },
+  "bulkLimitReached": {
+    "message": "最多可选择50个对话"
   }
 }

@@ -4,5 +4,62 @@
   },
   "extensionDescription": {
     "message": "Transforme a barra lateral do Gemini em um espaço de trabalho profissional com projetos, pastas e comandos rápidos."
+  },
+  "tags": {
+    "message": "Tags"
+  },
+  "createTag": {
+    "message": "Criar tag"
+  },
+  "tagName": {
+    "message": "Nome da tag"
+  },
+  "tagNamePlaceholder": {
+    "message": "Digite o nome da tag..."
+  },
+  "tagColor": {
+    "message": "Cor da tag"
+  },
+  "noTags": {
+    "message": "Nenhuma tag ainda"
+  },
+  "maxTagsReached": {
+    "message": "Máximo de 5 tags por chat"
+  },
+  "favorites": {
+    "message": "Favoritos"
+  },
+  "starred": {
+    "message": "Favoritar"
+  },
+  "unstarred": {
+    "message": "Desfavoritar"
+  },
+  "bulkSelection": {
+    "message": "Seleção múltipla"
+  },
+  "selected": {
+    "message": "selecionado(s)"
+  },
+  "moveSelected": {
+    "message": "Mover selecionados"
+  },
+  "tagSelected": {
+    "message": "Marcar selecionados"
+  },
+  "deleteSelected": {
+    "message": "Excluir selecionados"
+  },
+  "movedChats": {
+    "message": "{count} chats movidos"
+  },
+  "taggedChats": {
+    "message": "{count} chats marcados"
+  },
+  "removedChats": {
+    "message": "{count} chats removidos"
+  },
+  "bulkLimitReached": {
+    "message": "Máximo de 50 chats podem ser selecionados"
   }
 }

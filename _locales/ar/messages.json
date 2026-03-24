@@ -4,5 +4,62 @@
   },
   "extensionDescription": {
     "message": "حوّل الشريط الجانبي لـ Gemini إلى مساحة عمل احترافية مع المشاريع والمجلدات والأوامر السريعة."
+  },
+  "tags": {
+    "message": "الوسوم"
+  },
+  "createTag": {
+    "message": "إنشاء وسم"
+  },
+  "tagName": {
+    "message": "اسم الوسم"
+  },
+  "tagNamePlaceholder": {
+    "message": "أدخل اسم الوسم..."
+  },
+  "tagColor": {
+    "message": "لون الوسم"
+  },
+  "noTags": {
+    "message": "لا توجد وسوم بعد"
+  },
+  "maxTagsReached": {
+    "message": "الحد الأقصى 5 وسوم لكل محادثة"
+  },
+  "favorites": {
+    "message": "المميزة بنجمة"
+  },
+  "starred": {
+    "message": "إضافة نجمة"
+  },
+  "unstarred": {
+    "message": "إزالة النجمة"
+  },
+  "bulkSelection": {
+    "message": "تحديد متعدد"
+  },
+  "selected": {
+    "message": "محدد"
+  },
+  "moveSelected": {
+    "message": "نقل المحدد"
+  },
+  "tagSelected": {
+    "message": "وسم المحدد"
+  },
+  "deleteSelected": {
+    "message": "حذف المحدد"
+  },
+  "movedChats": {
+    "message": "تم نقل {count} محادثة"
+  },
+  "taggedChats": {
+    "message": "تم وسم {count} محادثة"
+  },
+  "removedChats": {
+    "message": "تم إزالة {count} محادثة"
+  },
+  "bulkLimitReached": {
+    "message": "يمكن تحديد 50 محادثة كحد أقصى"
   }
 }

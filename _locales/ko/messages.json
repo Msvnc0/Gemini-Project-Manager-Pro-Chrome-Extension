@@ -4,5 +4,62 @@
   },
   "extensionDescription": {
     "message": "Gemini 사이드바를 프로젝트, 폴더, 빠른 프롬프트가 있는 전문 워크스페이스로 변환하세요."
+  },
+  "tags": {
+    "message": "태그"
+  },
+  "createTag": {
+    "message": "태그 만들기"
+  },
+  "tagName": {
+    "message": "태그 이름"
+  },
+  "tagNamePlaceholder": {
+    "message": "태그 이름 입력..."
+  },
+  "tagColor": {
+    "message": "태그 색상"
+  },
+  "noTags": {
+    "message": "아직 태그 없음"
+  },
+  "maxTagsReached": {
+    "message": "채팅당 최대 5개 태그"
+  },
+  "favorites": {
+    "message": "별표 표시"
+  },
+  "starred": {
+    "message": "별표 추가"
+  },
+  "unstarred": {
+    "message": "별표 제거"
+  },
+  "bulkSelection": {
+    "message": "일괄 선택"
+  },
+  "selected": {
+    "message": "선택됨"
+  },
+  "moveSelected": {
+    "message": "선택 항목 이동"
+  },
+  "tagSelected": {
+    "message": "선택 항목 태그"
+  },
+  "deleteSelected": {
+    "message": "선택 항목 삭제"
+  },
+  "movedChats": {
+    "message": "{count}개 채팅 이동됨"
+  },
+  "taggedChats": {
+    "message": "{count}개 채팅 태그됨"
+  },
+  "removedChats": {
+    "message": "{count}개 채팅 삭제됨"
+  },
+  "bulkLimitReached": {
+    "message": "최대 50개 채팅을 선택할 수 있습니다"
   }
 }

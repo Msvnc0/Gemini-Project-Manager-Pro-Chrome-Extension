@@ -4,5 +4,62 @@
   },
   "extensionDescription": {
     "message": "Превратите боковую панель Gemini в профессиональное рабочее пространство с проектами, папками и быстрыми командами."
+  },
+  "tags": {
+    "message": "Теги"
+  },
+  "createTag": {
+    "message": "Создать тег"
+  },
+  "tagName": {
+    "message": "Название тега"
+  },
+  "tagNamePlaceholder": {
+    "message": "Введите название тега..."
+  },
+  "tagColor": {
+    "message": "Цвет тега"
+  },
+  "noTags": {
+    "message": "Тегов пока нет"
+  },
+  "maxTagsReached": {
+    "message": "Максимум 5 тегов на чат"
+  },
+  "favorites": {
+    "message": "Избранное"
+  },
+  "starred": {
+    "message": "В избранное"
+  },
+  "unstarred": {
+    "message": "Убрать из избранного"
+  },
+  "bulkSelection": {
+    "message": "Множественный выбор"
+  },
+  "selected": {
+    "message": "выбрано"
+  },
+  "moveSelected": {
+    "message": "Переместить выбранное"
+  },
+  "tagSelected": {
+    "message": "Добавить теги к выбранному"
+  },
+  "deleteSelected": {
+    "message": "Удалить выбранное"
+  },
+  "movedChats": {
+    "message": "Перемещено чатов: {count}"
+  },
+  "taggedChats": {
+    "message": "Помечено чатов: {count}"
+  },
+  "removedChats": {
+    "message": "Удалено чатов: {count}"
+  },
+  "bulkLimitReached": {
+    "message": "Максимум можно выбрать 50 чатов"
   }
 }

@@ -4,5 +4,62 @@
   },
   "extensionDescription": {
     "message": "Verwandeln Sie die Gemini-Seitenleiste in einen professionellen Arbeitsbereich mit Projekten, Ordnern und Schnellbefehlen."
+  },
+  "tags": {
+    "message": "Tags"
+  },
+  "createTag": {
+    "message": "Tag erstellen"
+  },
+  "tagName": {
+    "message": "Tag-Name"
+  },
+  "tagNamePlaceholder": {
+    "message": "Tag-Namen eingeben..."
+  },
+  "tagColor": {
+    "message": "Tag-Farbe"
+  },
+  "noTags": {
+    "message": "Noch keine Tags"
+  },
+  "maxTagsReached": {
+    "message": "Maximal 5 Tags pro Chat"
+  },
+  "favorites": {
+    "message": "Markiert"
+  },
+  "starred": {
+    "message": "Markieren"
+  },
+  "unstarred": {
+    "message": "Markierung entfernen"
+  },
+  "bulkSelection": {
+    "message": "Mehrfachauswahl"
+  },
+  "selected": {
+    "message": "ausgewählt"
+  },
+  "moveSelected": {
+    "message": "Ausgewählte verschieben"
+  },
+  "tagSelected": {
+    "message": "Ausgewählte taggen"
+  },
+  "deleteSelected": {
+    "message": "Ausgewählte löschen"
+  },
+  "movedChats": {
+    "message": "{count} Chats verschoben"
+  },
+  "taggedChats": {
+    "message": "{count} Chats getaggt"
+  },
+  "removedChats": {
+    "message": "{count} Chats entfernt"
+  },
+  "bulkLimitReached": {
+    "message": "Maximal 50 Chats können ausgewählt werden"
   }
 }

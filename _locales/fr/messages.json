@@ -4,5 +4,62 @@
   },
   "extensionDescription": {
     "message": "Transformez la barre latérale Gemini en espace de travail professionnel avec projets, dossiers et commandes rapides."
+  },
+  "tags": {
+    "message": "Tags"
+  },
+  "createTag": {
+    "message": "Créer un tag"
+  },
+  "tagName": {
+    "message": "Nom du tag"
+  },
+  "tagNamePlaceholder": {
+    "message": "Entrez le nom du tag..."
+  },
+  "tagColor": {
+    "message": "Couleur du tag"
+  },
+  "noTags": {
+    "message": "Pas encore de tags"
+  },
+  "maxTagsReached": {
+    "message": "Maximum 5 tags par chat"
+  },
+  "favorites": {
+    "message": "Favoris"
+  },
+  "starred": {
+    "message": "Marquer"
+  },
+  "unstarred": {
+    "message": "Démarquer"
+  },
+  "bulkSelection": {
+    "message": "Sélection multiple"
+  },
+  "selected": {
+    "message": "sélectionné(s)"
+  },
+  "moveSelected": {
+    "message": "Déplacer la sélection"
+  },
+  "tagSelected": {
+    "message": "Tager la sélection"
+  },
+  "deleteSelected": {
+    "message": "Supprimer la sélection"
+  },
+  "movedChats": {
+    "message": "{count} chats déplacés"
+  },
+  "taggedChats": {
+    "message": "{count} chats tagés"
+  },
+  "removedChats": {
+    "message": "{count} chats supprimés"
+  },
+  "bulkLimitReached": {
+    "message": "Maximum 50 chats peuvent être sélectionnés"
   }
 }
