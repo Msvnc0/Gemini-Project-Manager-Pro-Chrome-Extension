@@ -2,21 +2,85 @@
  * storage.js — Data Layer
  * Manages recursive project trees, chat mappings, quick prompts, and settings.
  *
+ * Schema Version: 2
+ *
  * Data Schema:
+ *   gpm_schemaVersion: number — current schema version
  *   gpm_projects: Array<Project>
- *   Project: { id, name, icon, color, parentId: null|string, children: string[], chatIds: string[], collapsed: bool }
- *   gpm_chatMap: { [chatId]: { projectId, alias, pinned } }
+ *   Project: { id, name, icon, color, parentId: null|string, children: string[], chatIds: string[], collapsed: bool, createdAt: number, updatedAt: number }
+ *   gpm_chatMap: { [chatId]: { projectId, alias, pinned, _autoResolved } }
  *   gpm_quickPrompts: Array<{ id, title, content, category }>
  *   gpm_settings: { lang, theme }
- *   gpm_projects_backup: Array<Project>  — auto-backup before each save
- *   gpm_chatMap_backup: { [chatId]: ... } — auto-backup before each save
+ *   gpm_backups: Array<Backup> — multiple backup versions
  */
 
+const GPM_SCHEMA_VERSION = 3;
+
 const GPMStorage = (() => {
+  // ── Schema Migrations ──
+  const MIGRATIONS = {
+    1: (data) => {
+      // v0 → v1: Add timestamps to projects
+      (data.gpm_projects || []).forEach((p) => {
+        if (!p.createdAt) p.createdAt = Date.now();
+        if (!p.updatedAt) p.updatedAt = Date.now();
+      });
+      return data;
+    },
+    2: (data) => {
+      // v1 → v2: Initialize backups array
+      if (!data.gpm_backups) data.gpm_backups = [];
+      return data;
+    },
+    3: (data) => {
+      // v2 → v3: Initialize tags and update chatMap schema
+      if (!data.gpm_tags) data.gpm_tags = {};
+
+      // Add tags and starredAt to existing chatMap entries
+      if (data.gpm_chatMap && typeof data.gpm_chatMap === 'object') {
+        for (const chatId of Object.keys(data.gpm_chatMap)) {
+          if (!data.gpm_chatMap[chatId].tags) {
+            data.gpm_chatMap[chatId].tags = [];
+          }
+          if (data.gpm_chatMap[chatId].starredAt === undefined) {
+            data.gpm_chatMap[chatId].starredAt = null;
+          }
+        }
+      }
+      return data;
+    },
+  };
+
+  async function runMigrations(data, fromVersion) {
+    let currentData = { ...data };
+    for (let v = fromVersion + 1; v <= GPM_SCHEMA_VERSION; v++) {
+      if (MIGRATIONS[v]) {
+        console.log(`[GPM Storage] Running migration v${v}`);
+        currentData = MIGRATIONS[v](currentData);
+      }
+    }
+    currentData.gpm_schemaVersion = GPM_SCHEMA_VERSION;
+    return currentData;
+  }
+
+  async function initializeStorage() {
+    const stored = await _get('gpm_schemaVersion');
+    const currentVersion = stored || 0;
+
+    if (currentVersion < GPM_SCHEMA_VERSION) {
+      const allData = await chrome.storage.local.get(null);
+      const migratedData = await runMigrations(allData, currentVersion);
+      await chrome.storage.local.set(migratedData);
+      console.log(`[GPM Storage] Migrated from v${currentVersion} to v${GPM_SCHEMA_VERSION}`);
+    }
+  }
+
   // ── Helpers ──
   function uid() {
-    const arr = crypto.getRandomValues(new Uint32Array(2));
-    return arr[0].toString(36) + arr[1].toString(36) + Date.now().toString(36);
+    const timestamp = Date.now().toString(36);
+    const random1 = crypto.getRandomValues(new Uint32Array(1))[0].toString(36);
+    const random2 = crypto.getRandomValues(new Uint32Array(1))[0].toString(36);
+    return `${timestamp}-${random1}-${random2}`;
   }
 
   // ── Mutex for serializing writes ──
@@ -258,78 +322,12 @@ const GPMStorage = (() => {
     );
   }
 
-  // ── Validation & Sanitization Helpers ──
-  function sanitizeString(str) {
-    if (typeof str !== 'string') return '';
-    return str.replace(/[<>]/g, '').trim();
-  }
-
-  function validateProject(p) {
-    if (!p || typeof p !== 'object') return null;
-    if (typeof p.id !== 'string' || !p.id) return null;
-    if (typeof p.name !== 'string' || !p.name) return null;
-    return {
-      id: sanitizeString(p.id),
-      name: sanitizeString(p.name),
-      icon: typeof p.icon === 'string' ? p.icon.slice(0, 8) : '📁',
-      color: typeof p.color === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(p.color) ? p.color : '#8ab4f8',
-      parentId: typeof p.parentId === 'string' ? sanitizeString(p.parentId) : null,
-      children: Array.isArray(p.children) ? p.children.filter((c) => typeof c === 'string').map(sanitizeString) : [],
-      chatIds: Array.isArray(p.chatIds) ? p.chatIds.filter((c) => typeof c === 'string').map(sanitizeString) : [],
-      collapsed: typeof p.collapsed === 'boolean' ? p.collapsed : false,
-      order: typeof p.order === 'number' ? p.order : undefined,
-    };
-  }
-
-  function validateChatMapping(entry) {
-    if (!entry || typeof entry !== 'object') return null;
-    if (typeof entry.projectId !== 'string') return null;
-    return {
-      projectId: sanitizeString(entry.projectId),
-      alias: typeof entry.alias === 'string' ? sanitizeString(entry.alias) : '',
-      pinned: typeof entry.pinned === 'boolean' ? entry.pinned : false,
-    };
-  }
-
-  function validateQuickPrompt(p) {
-    if (!p || typeof p !== 'object') return null;
-    if (typeof p.title !== 'string' || !p.title) return null;
-    if (typeof p.content !== 'string' || !p.content) return null;
-    return {
-      id: typeof p.id === 'string' ? sanitizeString(p.id) : uid(),
-      title: sanitizeString(p.title),
-      content: sanitizeString(p.content),
-      category: typeof p.category === 'string' ? sanitizeString(p.category) : 'General',
-    };
-  }
-
-  function validateSettings(s) {
-    if (!s || typeof s !== 'object') return null;
-    const validLangs = [
-      'ar',
-      'bn',
-      'de',
-      'en',
-      'es',
-      'fr',
-      'hi',
-      'id',
-      'it',
-      'ja',
-      'ko',
-      'pt',
-      'ru',
-      'th',
-      'tr',
-      'vi',
-      'zh-CN',
-    ];
-    const validThemes = ['auto', 'dark', 'light'];
-    return {
-      lang: validLangs.includes(s.lang) ? s.lang : 'en',
-      theme: validThemes.includes(s.theme) ? s.theme : 'auto',
-    };
-  }
+  // ── Validation & Sanitization Helpers (via GPMValidators) ──
+  const sanitizeString = GPMValidators.sanitizeString;
+  const validateProject = GPMValidators.validateProject;
+  const validateChatMapping = GPMValidators.validateChatMapping;
+  const validateQuickPrompt = GPMValidators.validateQuickPrompt;
+  const validateSettings = GPMValidators.validateSettings;
 
   async function importAll(jsonString) {
     const data = JSON.parse(jsonString);
@@ -407,6 +405,7 @@ const GPMStorage = (() => {
   }
 
   return {
+    initializeStorage,
     getProjects,
     saveProjects,
     createProject,

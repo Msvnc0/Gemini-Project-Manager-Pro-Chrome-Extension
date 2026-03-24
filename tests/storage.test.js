@@ -8,24 +8,53 @@
 
 import { resetMockStorage, getMockStorage, setMockStorage } from './mocks/chrome.js';
 
-// Load storage.js — it defines GPMStorage as a global IIFE
-// We need to eval it since it's not an ES module
+// Load validators.js and storage.js — they define globals as IIFEs
+// We need to eval them since they're not ES modules
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
+// Load and execute validators.js first (storage.js depends on it)
+const validatorsCode = readFileSync(resolve('src/utils/validators.js'), 'utf-8');
+const patchedValidators = validatorsCode.replace(/^const GPMValidators\s*=/m, 'globalThis.GPMValidators =');
+new Function(patchedValidators)();
+
+// Load and execute storage.js
 const storageCode = readFileSync(resolve('src/storage.js'), 'utf-8');
-
-// jsdom already provides crypto.getRandomValues — no mock needed
-// uid() will use the real crypto API which is fine for testing
-
-// Execute storage.js — rewrite `const GPMStorage =` to `globalThis.GPMStorage =`
-// so the IIFE result is accessible in ESM module scope
-const patchedCode = storageCode.replace(
-  /^const GPMStorage\s*=/m,
-  'globalThis.GPMStorage ='
-);
+const patchedCode = storageCode.replace(/^const GPMStorage\s*=/m, 'globalThis.GPMStorage =');
 new Function(patchedCode)();
 const GPMStorage = globalThis.GPMStorage;
+
+describe('Schema Migration v3', () => {
+  beforeEach(() => {
+    resetMockStorage();
+  });
+
+  it('should migrate from v2 to v3 and initialize tags', async () => {
+    setMockStorage({
+      gpm_schemaVersion: 2,
+      gpm_projects: [{ id: 'p1', name: 'Test' }],
+    });
+
+    await GPMStorage.initializeStorage();
+
+    const storage = getMockStorage();
+    expect(storage.gpm_schemaVersion).toBe(3);
+    expect(storage.gpm_tags).toEqual({});
+  });
+
+  it('should add tags array to existing chatMap entries', async () => {
+    setMockStorage({
+      gpm_schemaVersion: 2,
+      gpm_chatMap: { 'chat-1': { projectId: 'p1', alias: '', pinned: false } },
+    });
+
+    await GPMStorage.initializeStorage();
+
+    const chatMap = await GPMStorage.getChatMap();
+    expect(chatMap['chat-1'].tags).toEqual([]);
+    expect(chatMap['chat-1'].starredAt).toBeNull();
+  });
+});
 
 describe('GPMStorage', () => {
   beforeEach(() => {
@@ -453,7 +482,20 @@ describe('GPMStorage', () => {
 
     it('should create pre-import backup', async () => {
       await GPMStorage.createProject({ name: 'Existing' });
-      const json = JSON.stringify({ gpm_projects: [{ id: 'new', name: 'New', icon: '📁', color: '#000', parentId: null, children: [], chatIds: [], collapsed: false }] });
+      const json = JSON.stringify({
+        gpm_projects: [
+          {
+            id: 'new',
+            name: 'New',
+            icon: '📁',
+            color: '#000',
+            parentId: null,
+            children: [],
+            chatIds: [],
+            collapsed: false,
+          },
+        ],
+      });
 
       await GPMStorage.importAll(json);
 
@@ -465,7 +507,16 @@ describe('GPMStorage', () => {
     it('should validate and sanitize imported data', async () => {
       const maliciousJson = JSON.stringify({
         gpm_projects: [
-          { id: 'safe', name: 'Safe<script>', icon: '📁', color: '#8ab4f8', parentId: null, children: [], chatIds: [], collapsed: false },
+          {
+            id: 'safe',
+            name: 'Safe<script>',
+            icon: '📁',
+            color: '#8ab4f8',
+            parentId: null,
+            children: [],
+            chatIds: [],
+            collapsed: false,
+          },
           { id: '', name: '', icon: '📁', color: '#000' }, // invalid: empty id/name
           null, // invalid
         ],
