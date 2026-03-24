@@ -1296,3 +1296,126 @@
   color: var(--gpm-text-secondary);
   margin-bottom: 4px;
 }
+
+/* ═══════════════════════════════════════════════════════
+   TAG UI COMPONENTS
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Tag Chip ── */
+.gpm-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--tag-color, #3b82f6);
+  color: #fff;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gpm-tag-chip-active {
+  box-shadow:
+    0 0 0 2px #fff,
+    0 0 0 4px var(--tag-color);
+}
+
+.gpm-tag-chip-remove {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 0 0 4px;
+  opacity: 0.7;
+}
+
+/* ── Tag Selector ── */
+.gpm-tag-selector {
+  position: relative;
+  display: inline-block;
+}
+
+.gpm-tag-selector-trigger {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  opacity: 0.6;
+  border-radius: 4px;
+}
+
+.gpm-tag-selector-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  min-width: 160px;
+  background: var(--gpm-bg-elevated, #1e1e1e);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px 0;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.gpm-tag-selector-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+/* ── Star Button ── */
+.gpm-star-btn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 4px;
+  color: rgba(255, 255, 255, 0.4);
+  transition:
+    color 150ms,
+    transform 150ms;
+}
+
+.gpm-star-btn:hover {
+  color: #fbbf24;
+  transform: scale(1.1);
+}
+
+.gpm-star-btn.gpm-starred {
+  color: #fbbf24;
+}
+
+/* ── Tag Filter Bar ── */
+.gpm-tag-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 0;
+}
+
+/* ── Color Picker ── */
+.gpm-color-picker {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.gpm-color-option {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+.gpm-color-option.gpm-color-selected {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+}

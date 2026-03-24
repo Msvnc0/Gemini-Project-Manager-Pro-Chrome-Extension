@@ -23,6 +23,8 @@
         "src/sync/conflict-resolver.js",
         "src/templates/folder-templates.js",
         "src/tags/tags-manager.js",
+        "src/tags/tag-manager.js",
+        "src/tags/tag-ui.js",
         "src/keyboard/shortcuts.js",
         "src/history/undo-redo.js",
         "src/performance/virtual-list.js",
