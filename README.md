@@ -6,7 +6,7 @@ Transform your Gemini AI sidebar into a professional workspace with projects, fo
 [![Users](https://img.shields.io/chrome-web-store/users/jmngplnmgpfacedmkemopgdbapjbcmjk)](https://chromewebstore.google.com/detail/gemini-project-manager-pr/jmngplnmgpfacedmkemopgdbapjbcmjk)
 [![Rating](https://img.shields.io/chrome-web-store/rating/jmngplnmgpfacedmkemopgdbapjbcmjk)](https://chromewebstore.google.com/detail/gemini-project-manager-pr/jmngplnmgpfacedmkemopgdbapjbcmjk)
 
-## 🚀 Installation
+## Installation
 
 ### Option 1: Chrome Web Store (Recommended)
 
@@ -45,21 +45,21 @@ cd Gemini-Project-Manager-Pro-Chrome-Extension
 
 ## Features
 
-### 📁 Project Organization
+### Project Organization
 - Create unlimited projects and subfolders
 - Drag & drop chats into projects
 - Custom icons and colors for each project
 - Nested folder structure support
 - Project reordering via drag & drop
 
-### ⚡ Quick Prompts
+### Quick Prompts
 - Save frequently used prompts
 - One-click prompt insertion
 - Search and filter prompts
 - Backup and restore functionality
 - Token count estimation
 
-### 🌍 Multi-Language Support
+### Multi-Language Support
 - English, Turkish, German, French, Spanish
 - Italian, Portuguese, Russian, Japanese, Chinese
 - Hindi, Korean, Arabic, Vietnamese, Indonesian
@@ -67,24 +67,36 @@ cd Gemini-Project-Manager-Pro-Chrome-Extension
 - Automatic language detection
 - 17 languages supported
 
-### 🎨 Native Integration
+### Native Integration
 - Seamless Gemini UI integration
 - Dark mode support
 - Google Sans typography
 - Material Design 3 aesthetics
 
-### 💾 Data Management
+### Data Management
 - Export/import all data as JSON
+- Export filename includes date and time (e.g. `gpm-backup-2026-04-05_14-07-34.json`)
 - Auto-backup before every save
 - Restore from last backup via Settings
+- Manage Backups panel — create, restore, or individually delete backups
+- Single backup slot with quota monitoring (warns at 80% of 10MB limit)
 - Local storage (no cloud sync)
 - Privacy-focused design
 
-### 🛡️ Data Protection (v1.1.0)
+### Favorites
+- Star/unstar any chat for quick access
+- Starred chats sorted by date
+- Available across all projects
+
+### Data Protection
 - Automatic backup before every data modification
 - "Restore from Backup" button in Settings with timestamp preview
 - Mutex-based write protection for multi-tab safety
-- Cross-tab sync with debounce for smooth performance
+- Cross-tab lock with 5s timeout prevents concurrent writes
+- Atomic saves — projects and chatMap written in a single operation
+- 3-phase deletion verification with safety ratio check
+- Schema v5 migration removes all legacy backup keys
+- `unlimitedStorage` permission not needed — quota-aware design
 
 ## Usage
 
@@ -95,20 +107,26 @@ cd Gemini-Project-Manager-Pro-Chrome-Extension
 4. Drag chats into the project
 
 ### Quick Prompts
-1. Click the ⚡ button in the input toolbar
+1. Click the button in the input toolbar
 2. Add your frequently used prompts
 3. Click any prompt to insert it
 
 ### Settings
-1. Click the ⚙ gear icon in Projects header
+1. Click the gear icon in Projects header
 2. Change language
 3. Export/import data
 4. Restore from backup if needed
 5. Manage your workspace
 
+### Managing Backups
+1. Click "Manage Backups" in Settings
+2. Create a new manual backup
+3. Restore or delete any individual backup
+4. Each backup shows timestamp, project count, and chat count
+
 ### Restoring Lost Data
 If you notice missing chats in your projects:
-1. Click ⚙ in the Projects header
+1. Click the gear icon in the Projects header
 2. Click "Restore from Backup" — it shows the backup timestamp and content count
 3. Confirm to restore your projects and chats
 
@@ -117,6 +135,81 @@ If you notice missing chats in your projects:
 All data is stored locally in your browser. No data is sent to external servers. The extension only requires the `storage` permission to save your projects and settings.
 
 ## Changelog
+
+### v1.2.7 — Stability & Reliability Update
+
+🐛 False Deletion Fix:
+
+- Fixed false-positive "chat deleted" detection when Gemini's sidebar loads chats lazily — the extension no longer treats unloaded chats as deleted
+- Added sidebar stabilization tracking: deletion detection now waits until the sidebar chat count stabilizes (2 consecutive identical counts) before running any checks
+- Stricter threshold: deletion check is skipped entirely if DOM chat count is less than stored chat count, preventing premature false positives
+- Stabilization resets on tab visibility change to handle fresh sidebar loads correctly
+
+⌨️ Input Fixes:
+
+- Fixed a regression where the Space key stopped working in Gemini's message composer because global keyboard shortcuts were incorrectly intercepting contenteditable input fields
+- Made keyboard shortcut initialization idempotent to prevent duplicate listeners during re-initialization
+
+🔄 Data & Sync Reliability:
+
+- Reworked routine UI refresh sync to react to `chrome.storage` changes instead of relying on tab messaging for standard refresh flows
+- Made import and backup restore flows atomic by validating first, creating a backup, and writing the full target state in a single storage operation
+- Reduced sync fragility by removing routine dependency on `chrome.tabs` messaging for local refresh propagation
+
+🧪 Test & Stability Improvements:
+
+- Added coverage for duplicate keyboard shortcut initialization
+- Strengthened test and mock infrastructure for storage change handling
+- Improved DOM observer cleanup behavior during re-initialization and tests
+
+### v1.2.6 — Security Hardening
+
+🔒 Input Sanitization:
+
+- Switched to allowlist-based text sanitization — only known-safe characters are allowed (letters, numbers, punctuation, emoji, and international characters)
+- Turkish, CJK, Arabic, and other Unicode scripts are fully preserved while blocking potential XSS characters
+
+⌨️ Input Fixes:
+
+- Fixed a regression where the Space key stopped working in Gemini's message composer because global keyboard shortcuts were incorrectly intercepting contenteditable input fields
+- Made keyboard shortcut initialization idempotent to prevent duplicate listeners during re-initialization
+
+🔄 Data & Sync Reliability:
+
+- Reworked local sync handling to react to `chrome.storage` changes instead of relying on tab messaging for routine UI refreshes
+- Made import and backup restore flows atomic by validating first, creating a backup, and writing the full target state in a single storage operation
+
+🛡️ Error Handling:
+
+- Invalid JSON imports now show a clear error message with character position hint instead of crashing silently
+- Lock chain errors are now logged to console for debugging instead of being silently swallowed
+
+🧹 DOM Safety:
+
+- Replaced `innerHTML` usage in bulk toolbar with safe DOM methods (`createElement` + `textContent`) — eliminates potential XSS injection vector
+
+### v1.2.5 — Backup Management & Data Safety Overhaul
+
+💾 Backup Management:
+
+- Added delete button for each backup in the Manage Backups panel — you can now individually remove backups you no longer need
+- Export filename now includes human-readable date and time (e.g. `gpm-backup-2026-04-05_14-07-34.json`) instead of random numbers
+- Consolidated 7+ backup keys into a single slot — prevents storage quota overflow
+- Quota monitoring warns at 80% of 10MB limit and skips backup automatically if storage is nearly full
+- `deleteBackupConfirm` translation added for all 17 languages
+
+⭐ Favorites:
+
+- Star/unstar any chat for quick access across all projects — replaces the old tag/label system
+- Starred chats sorted by date for easy browsing
+
+🛡️ Data Safety:
+
+- Fixed critical schema version conflict between storage and background scripts that could cause data loss during extension updates
+- Cross-tab write lock with 5s timeout prevents data corruption when using multiple Gemini tabs
+- Atomic saves — projects and chat mappings are now written in a single operation
+- 3-phase deletion verification with safety ratio check ensures chats are never falsely removed
+- `unlimitedStorage` permission removed — no longer needed with the new quota-aware design
 
 ### v1.2.3 — Post-Import Cleanup
 - ✨ **Added:** Automatic cleanup after importing/restoring backup — deleted chats are now removed from GPM projects
@@ -166,9 +259,9 @@ All data is stored locally in your browser. No data is sent to external servers.
 
 ## Support
 
-- 🐛 [Report Issues](https://github.com/Msvnc0/Gemini-Project-Manager-Pro-Chrome-Extension/issues)
-- ⭐ [Rate on Chrome Web Store](https://chromewebstore.google.com/detail/gemini-project-manager-pr/jmngplnmgpfacedmkemopgdbapjbcmjk)
-- 💬 [Discussions](https://github.com/Msvnc0/Gemini-Project-Manager-Pro-Chrome-Extension/discussions)
+- [Report Issues](https://github.com/Msvnc0/Gemini-Project-Manager-Pro-Chrome-Extension/issues)
+- [Rate on Chrome Web Store](https://chromewebstore.google.com/detail/gemini-project-manager-pr/jmngplnmgpfacedmkemopgdbapjbcmjk)
+- [Discussions](https://github.com/Msvnc0/Gemini-Project-Manager-Pro-Chrome-Extension/discussions)
 
 ## Contributing
 

@@ -24,6 +24,20 @@
 //  GEMINI INTERACTION HELPERS
 // ══════════════════════════════════════
 
+function gpmNavigateToUrl(url) {
+  try {
+    const isJsdom = typeof navigator !== 'undefined' && /jsdom/i.test(navigator.userAgent || '');
+    if (isJsdom) {
+      const target = new URL(url, window.location.origin);
+      history.replaceState(null, '', target.pathname + target.search + target.hash);
+      return;
+    }
+    window.location.href = url;
+  } catch (e) {
+    gpmWarn('Navigation fallback failed:', e.message);
+  }
+}
+
 function gpmTriggerNewChat() {
   gpmLog('Triggering new chat...');
 
@@ -67,7 +81,7 @@ function gpmTriggerNewChat() {
 
   if (!clicked) {
     gpmLog('Fallback: navigating to /app');
-    window.location.href = 'https://gemini.google.com/app';
+    gpmNavigateToUrl('https://gemini.google.com/app');
   }
 }
 
@@ -82,7 +96,7 @@ function gpmNavigateToChat(chatId) {
     }
   }
   // Fallback: direct navigation using /app/<id> format
-  window.location.href = `https://gemini.google.com/app/${chatId}`;
+  gpmNavigateToUrl(`https://gemini.google.com/app/${chatId}`);
 }
 
 function gpmGetCurrentChatId() {
@@ -95,26 +109,65 @@ function gpmGetCurrentChatId() {
 //  SPA NAVIGATION OBSERVER
 // ══════════════════════════════════════
 
+let _spaObserver = null;
+let _spaCheckFn = null;
+let _sidebarObserver = null;
+let _newChatsObserver = null;
+
 function gpmObserveSPANavigation() {
+  if (_spaObserver) return;
+
   let lastUrl = location.href;
-  const check = () => {
+  _spaCheckFn = () => {
     if (location.href !== lastUrl) {
       lastUrl = location.href;
       gpmOnNavigate();
     }
   };
-  new MutationObserver(check).observe(document.body, { childList: true, subtree: true });
-  window.addEventListener('popstate', check);
+
+  _spaObserver = new MutationObserver(_spaCheckFn);
+  _spaObserver.observe(document.body, { childList: true, subtree: true });
+  window.addEventListener('popstate', _spaCheckFn);
   const origPush = history.pushState;
   const origReplace = history.replaceState;
   history.pushState = function (...a) {
     origPush.apply(this, a);
-    check();
+    _spaCheckFn();
   };
   history.replaceState = function (...a) {
     origReplace.apply(this, a);
-    check();
+    _spaCheckFn();
   };
+
+  GPM_STATE._origPushState = origPush;
+  GPM_STATE._origReplaceState = origReplace;
+}
+
+function gpmCleanupObservers() {
+  if (_spaObserver) {
+    _spaObserver.disconnect();
+    _spaObserver = null;
+  }
+  if (_spaCheckFn) {
+    window.removeEventListener('popstate', _spaCheckFn);
+    _spaCheckFn = null;
+  }
+  if (_sidebarObserver) {
+    _sidebarObserver.disconnect();
+    _sidebarObserver = null;
+  }
+  if (_newChatsObserver) {
+    _newChatsObserver.disconnect();
+    _newChatsObserver = null;
+  }
+  if (GPM_STATE._origPushState) {
+    history.pushState = GPM_STATE._origPushState;
+    delete GPM_STATE._origPushState;
+  }
+  if (GPM_STATE._origReplaceState) {
+    history.replaceState = GPM_STATE._origReplaceState;
+    delete GPM_STATE._origReplaceState;
+  }
 }
 
 function gpmOnNavigate() {
@@ -132,21 +185,69 @@ function gpmOnNavigate() {
 //  DELETED CHAT DETECTION
 // ══════════════════════════════════════
 
+function _gpmGetSidebarChatCount() {
+  const sidebar = document.querySelector(GPM_SELECTORS.sidebar);
+  if (!sidebar) return 0;
+  return sidebar.querySelectorAll('a[href^="/app/"]').length;
+}
+
+function _gpmWaitForSidebarStabilize() {
+  if (GPM_STATE._sidebarStabilized) return;
+
+  clearInterval(GPM_STATE._sidebarStabilizeTimer);
+  GPM_STATE._sidebarStableCount = 0;
+  GPM_STATE._lastSidebarChatCount = 0;
+
+  GPM_STATE._sidebarStabilizeTimer = setInterval(() => {
+    if (!gpmIsContextValid()) {
+      clearInterval(GPM_STATE._sidebarStabilizeTimer);
+      return;
+    }
+
+    const count = _gpmGetSidebarChatCount();
+
+    if (count === 0) {
+      GPM_STATE._sidebarStableCount = 0;
+      GPM_STATE._lastSidebarChatCount = 0;
+      return;
+    }
+
+    if (count === GPM_STATE._lastSidebarChatCount) {
+      GPM_STATE._sidebarStableCount++;
+    } else {
+      GPM_STATE._sidebarStableCount = 0;
+    }
+    GPM_STATE._lastSidebarChatCount = count;
+
+    if (GPM_STATE._sidebarStableCount >= GPM_CONFIG.SIDEBAR_STABILIZE_REQUIRED) {
+      clearInterval(GPM_STATE._sidebarStabilizeTimer);
+      GPM_STATE._sidebarStabilized = true;
+      gpmLog('Sidebar stabilized with', count, 'chat(s), enabling deletion detection');
+    }
+  }, GPM_CONFIG.SIDEBAR_STABILIZE_INTERVAL);
+}
+
 /**
  * Detect chats that have been deleted from Gemini's native sidebar and
  * remove them from GPM's storage (projects.chatIds + chatMap).
  *
  * Strategy:
+ *   0. Wait for sidebar chat count to stabilize (lazy-load protection)
  *   1. Collect all chat IDs currently visible in the sidebar DOM
  *   2. Compare against all chat IDs stored in GPM's projects
  *   3. If a stored chat ID is missing from the DOM, it may be deleted
- *   4. Use a two-phase verification: first mutation marks candidates,
+ *   4. Use a multi-phase verification: first mutation marks candidates,
  *      debounced check verifies they're still missing after stabilization
  *
  * This avoids false positives from Gemini lazy-loading or DOM recycling.
  */
 function gpmDetectDeletedChats() {
-  // Debounce: wait for sidebar DOM to stabilize before checking
+  if (!GPM_STATE._sidebarStabilized) {
+    _gpmWaitForSidebarStabilize();
+    gpmLog('Deletion check: Sidebar not yet stabilized, deferring check');
+    return;
+  }
+
   clearTimeout(GPM_STATE._deletionCheckTimer);
   GPM_STATE._deletionCheckTimer = setTimeout(async () => {
     if (!gpmIsContextValid()) return;
@@ -154,7 +255,6 @@ function gpmDetectDeletedChats() {
     const sidebar = document.querySelector(GPM_SELECTORS.sidebar);
     if (!sidebar) return;
 
-    // ── Step 1: Collect all chat IDs visible in the sidebar DOM ──
     const sidebarLinks = sidebar.querySelectorAll('a[href^="/app/"]');
     const domChatIds = new Set();
     for (const link of sidebarLinks) {
@@ -163,18 +263,17 @@ function gpmDetectDeletedChats() {
       if (cid) domChatIds.add(cid);
     }
 
-    // If sidebar has NO chat links at all, Gemini may still be loading — skip
-    // (prevents false mass-deletion when sidebar is in transition)
     if (domChatIds.size === 0) {
       gpmLog('Deletion check: No chat links in sidebar, skipping (may be loading)');
+      GPM_STATE._deletionPhaseCount = 0;
+      GPM_STATE._pendingDeletedChatIds = null;
+      GPM_STATE._sidebarStabilized = false;
       return;
     }
 
-    // ── Step 2: Load stored data ──
     const projects = await GPMStorage.getProjects();
     const chatMap = await GPMStorage.getChatMap();
 
-    // Collect all stored chat IDs across all projects
     const storedChatIds = new Set();
     for (const project of projects) {
       for (const cid of project.chatIds || []) {
@@ -182,7 +281,26 @@ function gpmDetectDeletedChats() {
       }
     }
 
-    // ── Step 3: Find orphaned chat IDs (in storage but not in DOM) ──
+    if (storedChatIds.size === 0) {
+      GPM_STATE._deletionPhaseCount = 0;
+      GPM_STATE._pendingDeletedChatIds = null;
+      return;
+    }
+
+    if (domChatIds.size < storedChatIds.size) {
+      gpmLog(
+        'Deletion check: Sidebar not fully loaded (stored:',
+        storedChatIds.size,
+        'dom:',
+        domChatIds.size,
+        '), resetting stabilization'
+      );
+      GPM_STATE._deletionPhaseCount = 0;
+      GPM_STATE._pendingDeletedChatIds = null;
+      GPM_STATE._sidebarStabilized = false;
+      return;
+    }
+
     const orphanedIds = [];
     for (const cid of storedChatIds) {
       if (!domChatIds.has(cid)) {
@@ -190,32 +308,51 @@ function gpmDetectDeletedChats() {
       }
     }
 
-    if (orphanedIds.length === 0) return;
+    if (orphanedIds.length === 0) {
+      GPM_STATE._deletionPhaseCount = 0;
+      GPM_STATE._pendingDeletedChatIds = null;
+      return;
+    }
 
-    // ── Step 4: Two-phase verification ──
-    // If this is the first detection, store candidates and wait for next check
+    GPM_STATE._deletionPhaseCount++;
+    const currentPhase = GPM_STATE._deletionPhaseCount;
+    const totalPhases = GPM_CONFIG.DELETION_CHECK_PHASES;
+
     if (!GPM_STATE._pendingDeletedChatIds) {
       GPM_STATE._pendingDeletedChatIds = new Set(orphanedIds);
-      gpmLog('Deletion check: Candidates for removal (pending verification):', orphanedIds);
-      // Schedule a second check after another debounce period
+    } else {
+      const prev = GPM_STATE._pendingDeletedChatIds;
+      GPM_STATE._pendingDeletedChatIds = new Set(orphanedIds.filter((cid) => prev.has(cid)));
+    }
+
+    gpmLog(
+      'Deletion check: Phase',
+      currentPhase,
+      '/',
+      totalPhases,
+      '-',
+      GPM_STATE._pendingDeletedChatIds.size,
+      'candidates remaining'
+    );
+
+    if (currentPhase < totalPhases) {
       GPM_STATE._deletionCheckTimer = setTimeout(() => {
         gpmDetectDeletedChats();
       }, GPM_CONFIG.DELETION_CHECK_DEBOUNCE);
       return;
     }
 
-    // Second pass: only remove IDs that were orphaned in BOTH checks
-    const confirmedDeleted = orphanedIds.filter((cid) => GPM_STATE._pendingDeletedChatIds.has(cid));
-    GPM_STATE._pendingDeletedChatIds = null; // Reset for next cycle
+    const confirmedDeleted = [...GPM_STATE._pendingDeletedChatIds];
+    GPM_STATE._deletionPhaseCount = 0;
+    GPM_STATE._pendingDeletedChatIds = null;
 
     if (confirmedDeleted.length === 0) {
-      gpmLog('Deletion check: No confirmed deletions after verification');
+      gpmLog('Deletion check: No confirmed deletions after all phases');
       return;
     }
 
     gpmLog('Deletion check: Confirmed deleted chats:', confirmedDeleted);
 
-    // 🛡️ SAFETY: Require user confirmation for bulk deletions (3+ chats)
     if (confirmedDeleted.length >= 3) {
       const confirmed = await new Promise((resolve) => {
         if (!GPM_STATE.modalRoot) {
@@ -240,7 +377,6 @@ function gpmDetectDeletedChats() {
       }
     }
 
-    // ── Step 5: Remove confirmed orphaned chats from storage ──
     let storageUpdated = false;
     const confirmedSet = new Set(confirmedDeleted);
 
@@ -280,7 +416,7 @@ function gpmDetectDeletedChats() {
  * @param {number} retryDelay - Delay between retries in ms (default: 1500)
  * @returns {Promise<number>} - Number of chats removed
  */
-async function gpmCleanupAfterImport(maxRetries = 3, retryDelay = 1500) {
+async function gpmCleanupAfterImport(maxRetries = 5, retryDelay = 3000) {
   if (!gpmIsContextValid()) return 0;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -293,7 +429,6 @@ async function gpmCleanupAfterImport(maxRetries = 3, retryDelay = 1500) {
       continue;
     }
 
-    // Collect all chat IDs visible in the sidebar DOM
     const sidebarLinks = sidebar.querySelectorAll('a[href^="/app/"]');
     const domChatIds = new Set();
     for (const link of sidebarLinks) {
@@ -302,7 +437,6 @@ async function gpmCleanupAfterImport(maxRetries = 3, retryDelay = 1500) {
       if (cid) domChatIds.add(cid);
     }
 
-    // If sidebar has no chat links, it may still be loading
     if (domChatIds.size === 0) {
       gpmLog(`Cleanup attempt ${attempt}/${maxRetries}: No chat links in sidebar, waiting...`);
       if (attempt < maxRetries) {
@@ -311,14 +445,11 @@ async function gpmCleanupAfterImport(maxRetries = 3, retryDelay = 1500) {
       continue;
     }
 
-    // Sidebar is ready with chat content
     gpmLog(`Cleanup attempt ${attempt}/${maxRetries}: Found ${domChatIds.size} chats in sidebar`);
 
-    // Load stored data
     const projects = await GPMStorage.getProjects();
     const chatMap = await GPMStorage.getChatMap();
 
-    // Collect all stored chat IDs across all projects
     const storedChatIds = new Set();
     for (const project of projects) {
       for (const cid of project.chatIds || []) {
@@ -326,7 +457,20 @@ async function gpmCleanupAfterImport(maxRetries = 3, retryDelay = 1500) {
       }
     }
 
-    // Find orphaned chat IDs (in storage but not in DOM)
+    if (storedChatIds.size > 0 && domChatIds.size < storedChatIds.size * 0.5) {
+      gpmLog(
+        `Cleanup attempt ${attempt}/${maxRetries}: Sidebar likely incomplete (stored:`,
+        storedChatIds.size,
+        'dom:',
+        domChatIds.size,
+        '), waiting...'
+      );
+      if (attempt < maxRetries) {
+        await new Promise((resolve) => setTimeout(resolve, retryDelay));
+      }
+      continue;
+    }
+
     const orphanedIds = [];
     for (const cid of storedChatIds) {
       if (!domChatIds.has(cid)) {
@@ -446,7 +590,10 @@ function gpmObserveNewChats() {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
       gpmStartPolling();
-      // Re-render on tab focus to catch cross-tab changes
+      GPM_STATE._sidebarStabilized = false;
+      GPM_STATE._sidebarStableCount = 0;
+      GPM_STATE._lastSidebarChatCount = 0;
+      _gpmWaitForSidebarStabilize();
       gpmRenderTree();
     } else {
       gpmStopPolling();
@@ -456,6 +603,7 @@ function gpmObserveNewChats() {
   // Start polling only if tab is visible
   if (document.visibilityState === 'visible') {
     gpmStartPolling();
+    _gpmWaitForSidebarStabilize();
   }
 
   // Enhance native chat items for drag & drop + detect deleted chats
@@ -464,8 +612,7 @@ function gpmObserveNewChats() {
   if (sidebar) {
     let enhanceTimeout = null;
 
-    new MutationObserver((mutations) => {
-      // Filter: ignore mutations from our own GPM elements to avoid feedback loops
+    _newChatsObserver = new MutationObserver((mutations) => {
       const relevant = mutations.some((m) => {
         const target = m.target;
         if (target.closest && target.closest('[data-gpm]')) return false;
@@ -479,13 +626,12 @@ function gpmObserveNewChats() {
         gpmEnhanceNativeChatItems();
       }, GPM_CONFIG.ENHANCE_DEBOUNCE);
 
-      // ── Trigger deleted chat detection on sidebar DOM changes ──
-      // Check if any nodes were REMOVED (potential chat deletion)
       const hasRemovals = mutations.some((m) => m.removedNodes.length > 0);
       if (hasRemovals) {
         gpmDetectDeletedChats();
       }
-    }).observe(sidebar, { childList: true, subtree: true });
+    });
+    _newChatsObserver.observe(sidebar, { childList: true, subtree: true });
     gpmEnhanceNativeChatItems();
   }
 }

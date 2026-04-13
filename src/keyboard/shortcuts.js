@@ -7,7 +7,7 @@
 
 const GPMKeyboardShortcuts = (() => {
   const SHORTCUTS = {
-    'ctrl+n': { action: 'newFolder', description: 'Yeni klasör oluştur' },
+    'alt+n': { action: 'newFolder', description: 'Yeni klasör oluştur' },
     'ctrl+f': { action: 'focusSearch', description: 'Arama alanına odaklan' },
     'ctrl+shift+n': { action: 'newChat', description: 'Yeni sohbet başlat' },
     'ctrl+e': { action: 'editSelected', description: 'Seçili öğeyi düzenle' },
@@ -136,36 +136,43 @@ const GPMKeyboardShortcuts = (() => {
     return parts.join('+');
   }
 
-  function init() {
-    document.addEventListener('keydown', (e) => {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-        if (e.key !== 'Escape') return;
-      }
-
-      const shortcutKey = getShortcutKey(e);
-      const shortcut = SHORTCUTS[shortcutKey];
-
-      if (shortcut && handlers[shortcut.action]) {
-        e.preventDefault();
-        handlers[shortcut.action]();
-      }
-    });
-
-    gpmLog('[GPM Keyboard] Shortcuts initialized');
+  function isEditableTarget(target) {
+    if (!(target instanceof Element)) return false;
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return true;
+    if (target.isContentEditable) return true;
+    return !!target.closest('[contenteditable="true"], [role="textbox"], input, textarea');
   }
 
-  function getShortcutsList() {
-    return Object.entries(SHORTCUTS).map(([key, config]) => ({
-      key,
-      action: config.action,
-      description: config.description,
-    }));
+  let _initialized = false;
+  let _abortController = null;
+
+  function init() {
+    if (_initialized) return;
+
+    _abortController = new AbortController();
+    document.addEventListener(
+      'keydown',
+      (e) => {
+        if (isEditableTarget(e.target)) {
+          if (e.key !== 'Escape') return;
+        }
+
+        const shortcutKey = getShortcutKey(e);
+        const shortcut = SHORTCUTS[shortcutKey];
+
+        if (shortcut && handlers[shortcut.action]) {
+          e.preventDefault();
+          handlers[shortcut.action]();
+        }
+      },
+      { signal: _abortController.signal }
+    );
+
+    _initialized = true;
+    gpmLog('[GPM Keyboard] Shortcuts initialized');
   }
 
   return {
     init,
-    getShortcutsList,
-    handlers,
-    SHORTCUTS,
   };
 })();

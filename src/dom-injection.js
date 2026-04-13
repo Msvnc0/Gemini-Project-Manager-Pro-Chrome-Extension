@@ -18,6 +18,11 @@
 // ══════════════════════════════════════
 
 function gpmInjectStyles() {
+  const existing = document.getElementById('gpm-injected-styles');
+  if (existing) {
+    GPM_STATE.styleInjected = true;
+    return;
+  }
   if (GPM_STATE.styleInjected) return;
   GPM_STATE.styleInjected = true;
 
@@ -315,6 +320,12 @@ function gpmInjectStyles() {
 // ══════════════════════════════════════
 
 function gpmCreateModalHost() {
+  const existing = document.getElementById('gpm-modal-host');
+  if (existing) {
+    GPM_STATE.modalHost = existing;
+    GPM_STATE.modalRoot = existing.shadowRoot;
+    return;
+  }
   if (GPM_STATE.modalHost) return;
   GPM_STATE.modalHost = document.createElement('div');
   GPM_STATE.modalHost.id = 'gpm-modal-host';
@@ -379,10 +390,16 @@ function gpmFindInsertionPoint(sidebar) {
       let depth = 0;
       while (el && el !== sidebar && depth < 20) {
         const parent = el.parentElement;
-        if (!parent || parent === sidebar) { insertTarget = el; break; }
+        if (!parent || parent === sidebar) {
+          insertTarget = el;
+          break;
+        }
         if (parent.children.length >= 2) {
-          const siblingTexts = Array.from(parent.children).map(c => c.textContent?.trim().slice(0, 20));
-          if (new Set(siblingTexts).size >= 2) { insertTarget = el; break; }
+          const siblingTexts = Array.from(parent.children).map((c) => c.textContent?.trim().slice(0, 20));
+          if (new Set(siblingTexts).size >= 2) {
+            insertTarget = el;
+            break;
+          }
         }
         el = parent;
         insertTarget = el;
@@ -464,7 +481,9 @@ function gpmInjectProjectSection(sidebar) {
     }
   } catch (e) {
     gpmWarn('insertBefore failed, using appendChild fallback:', e.message);
-    try { parent.appendChild(GPM_STATE.container); } catch (_) { }
+    try {
+      parent.appendChild(GPM_STATE.container);
+    } catch (_) {}
   }
 
   gpmRenderTree();
@@ -489,7 +508,10 @@ function gpmWaitForSidebarContent(sidebar, timeout = 10000) {
       }
     });
     observer.observe(sidebar, { childList: true, subtree: true });
-    setTimeout(() => { observer.disconnect(); resolve(false); }, timeout);
+    setTimeout(() => {
+      observer.disconnect();
+      resolve(false);
+    }, timeout);
   });
 }
 
@@ -500,41 +522,67 @@ function gpmSidebarHasContent(sidebar) {
   if (sidebar.querySelector('a[href*="/chat/"], a[href*="/c/"]')) return true;
   // Check for "Chats" text in all 10 supported languages
   const chatLabels = [
-    'Chats', 'Sohbetler',           // en, tr
-    'Chats',                         // fr, pt (same as en)
-    'Chat',                          // de, it
-    'Чаты',                          // ru
-    'チャット',                       // ja
-    '聊天',                           // zh_CN
-    'Conversaciones',                // es
-    'चैट्स',                         // hi
-    '대화',                          // ko
-    'المحادثات',                     // ar
-    'Cuộc trò chuyện',              // vi
-    'Obrolan',                       // id
-    'แชท',                           // th
-    'চ্যাটস'                         // bn
+    'Chats',
+    'Sohbetler', // en, tr
+    'Chats', // fr, pt (same as en)
+    'Chat', // de, it
+    'Чаты', // ru
+    'チャット', // ja
+    '聊天', // zh_CN
+    'Conversaciones', // es
+    'चैट्स', // hi
+    '대화', // ko
+    'المحادثات', // ar
+    'Cuộc trò chuyện', // vi
+    'Obrolan', // id
+    'แชท', // th
+    'চ্যাটস', // bn
   ];
   const sidebarText = sidebar.textContent || '';
-  if (chatLabels.some(label => sidebarText.includes(label))) return true;
+  if (chatLabels.some((label) => sidebarText.includes(label))) return true;
   // Check for Gems section (sidebar loaded even if no chats exist)
   if (sidebar.querySelector('.gems-list-container')) return true;
   if (sidebar.querySelector('.chat-history')) return true;
-  const gemLabels = ['Gems', "Gem'ler", 'Gemmes', 'Gemas', 'ジェム', '宝石', 'जेम्स', '젬', 'الأحجار', 'Gem', 'เจม', 'জেমস'];
-  if (gemLabels.some(label => sidebarText.includes(label))) return true;
+  const gemLabels = [
+    'Gems',
+    "Gem'ler",
+    'Gemmes',
+    'Gemas',
+    'ジェム',
+    '宝石',
+    'जेम्स',
+    '젬',
+    'الأحجار',
+    'Gem',
+    'เจม',
+    'জেমস',
+  ];
+  if (gemLabels.some((label) => sidebarText.includes(label))) return true;
   // Check for "My stuff" / "Öğelerim" section
   if (sidebar.querySelector('.side-nav-entry-container')) return true;
   return false;
 }
 
+let _sidebarPresenceObserver = null;
+
 function gpmObserveForSidebar() {
-  const observer = new MutationObserver(() => {
+  if (_sidebarPresenceObserver) return;
+  if (typeof document === 'undefined' || !document.body) return;
+
+  _sidebarPresenceObserver = new MutationObserver(() => {
+    if (typeof document === 'undefined') {
+      _sidebarPresenceObserver?.disconnect();
+      _sidebarPresenceObserver = null;
+      return;
+    }
+
     if (document.querySelector(GPM_SELECTORS.sidebar) && !GPM_STATE.initialized) {
-      observer.disconnect();
+      _sidebarPresenceObserver.disconnect();
+      _sidebarPresenceObserver = null;
       gpmInit();
     }
   });
-  observer.observe(document.body, { childList: true, subtree: true });
+  _sidebarPresenceObserver.observe(document.body, { childList: true, subtree: true });
 }
 
 // ══════════════════════════════════════
@@ -569,7 +617,14 @@ function gpmStartHealthMonitor() {
     const sidebarExists = !!document.querySelector(GPM_SELECTORS.sidebar);
 
     if (!containerInDOM || !modalHostInDOM) {
-      gpmLog('Health check: DOM element missing — container:', containerInDOM, 'modalHost:', modalHostInDOM, 'sidebar:', sidebarExists);
+      gpmLog(
+        'Health check: DOM element missing — container:',
+        containerInDOM,
+        'modalHost:',
+        modalHostInDOM,
+        'sidebar:',
+        sidebarExists
+      );
 
       if (sidebarExists) {
         // Sidebar exists but our elements are gone → Gemini re-mounted
@@ -608,6 +663,10 @@ function gpmStopHealthMonitor() {
     GPM_STATE.healthCheckTimer = null;
     gpmLog('DOM health monitor stopped');
   }
+  if (_sidebarPresenceObserver) {
+    _sidebarPresenceObserver.disconnect();
+    _sidebarPresenceObserver = null;
+  }
 }
 
 /**
@@ -618,7 +677,11 @@ function gpmStopHealthMonitor() {
 function gpmScheduleReinit(reason) {
   // Check failure count — back off if too many consecutive failures
   if (GPM_STATE.reinitFailCount >= GPM_CONFIG.MAX_REINIT_FAILURES) {
-    gpmWarn('Re-init backed off after', GPM_STATE.reinitFailCount, 'consecutive failures. Waiting for sidebar observer.');
+    gpmWarn(
+      'Re-init backed off after',
+      GPM_STATE.reinitFailCount,
+      'consecutive failures. Waiting for sidebar observer.'
+    );
     GPM_STATE.initialized = false;
     gpmObserveForSidebar();
     return;

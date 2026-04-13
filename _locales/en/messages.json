@@ -5,27 +5,6 @@
   "extensionDescription": {
     "message": "Transform Gemini sidebar into a professional workspace with projects, folders, and quick prompts."
   },
-  "tags": {
-    "message": "Tags"
-  },
-  "createTag": {
-    "message": "Create Tag"
-  },
-  "tagName": {
-    "message": "Tag Name"
-  },
-  "tagNamePlaceholder": {
-    "message": "Enter tag name..."
-  },
-  "tagColor": {
-    "message": "Tag Color"
-  },
-  "noTags": {
-    "message": "No tags yet"
-  },
-  "maxTagsReached": {
-    "message": "Maximum 5 tags per chat"
-  },
   "favorites": {
     "message": "Starred"
   },
@@ -44,17 +23,11 @@
   "moveSelected": {
     "message": "Move Selected"
   },
-  "tagSelected": {
-    "message": "Tag Selected"
-  },
   "deleteSelected": {
     "message": "Delete Selected"
   },
   "movedChats": {
     "message": "Moved {count} chats"
-  },
-  "taggedChats": {
-    "message": "Tagged {count} chats"
   },
   "removedChats": {
     "message": "Removed {count} chats"

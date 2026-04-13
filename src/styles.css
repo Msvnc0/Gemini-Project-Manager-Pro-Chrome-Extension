@@ -1039,18 +1039,6 @@
    V2.0 NEW STYLES — Tags, Favorites, Selection, Templates
    ═══════════════════════════════════════════════════════ */
 
-/* ── Tag Badge ── */
-.gpm-tag-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 11px;
-  white-space: nowrap;
-  margin-right: 4px;
-}
-
 /* ── Favorite Star ── */
 .gpm-favorite-star {
   color: #fdd663;
@@ -1297,79 +1285,6 @@
   margin-bottom: 4px;
 }
 
-/* ═══════════════════════════════════════════════════════
-   TAG UI COMPONENTS
-   ═══════════════════════════════════════════════════════ */
-
-/* ── Tag Chip ── */
-.gpm-tag-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 500;
-  background: var(--tag-color, #3b82f6);
-  color: #fff;
-  max-width: 100px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.gpm-tag-chip-active {
-  box-shadow:
-    0 0 0 2px #fff,
-    0 0 0 4px var(--tag-color);
-}
-
-.gpm-tag-chip-remove {
-  background: none;
-  border: none;
-  color: inherit;
-  font-size: 14px;
-  cursor: pointer;
-  padding: 0 0 0 4px;
-  opacity: 0.7;
-}
-
-/* ── Tag Selector ── */
-.gpm-tag-selector {
-  position: relative;
-  display: inline-block;
-}
-
-.gpm-tag-selector-trigger {
-  background: none;
-  border: none;
-  padding: 4px;
-  cursor: pointer;
-  opacity: 0.6;
-  border-radius: 4px;
-}
-
-.gpm-tag-selector-dropdown {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  min-width: 160px;
-  background: var(--gpm-bg-elevated, #1e1e1e);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 8px 0;
-  z-index: 1000;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-.gpm-tag-selector-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  cursor: pointer;
-}
-
 /* ── Star Button ── */
 .gpm-star-btn {
   background: none;
@@ -1390,14 +1305,6 @@
 
 .gpm-star-btn.gpm-starred {
   color: #fbbf24;
-}
-
-/* ── Tag Filter Bar ── */
-.gpm-tag-filter-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 8px 0;
 }
 
 /* ── Color Picker ── */
@@ -1441,4 +1348,90 @@
 .gpm-bulk-toolbar .gpm-btn-sm {
   padding: 6px 12px;
   font-size: 12px;
+}
+
+#gpm-toast-container {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 8px;
+  pointer-events: none;
+}
+.gpm-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-family: 'Google Sans', sans-serif;
+  font-size: 13px;
+  color: #fff;
+  background: #323232;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  animation: gpm-toast-in 300ms ease;
+  max-width: 360px;
+}
+.gpm-toast-success {
+  background: #1e7e34;
+}
+.gpm-toast-error {
+  background: #bd2130;
+}
+.gpm-toast-warning {
+  background: #d39e00;
+  color: #212529;
+}
+.gpm-toast-info {
+  background: #323232;
+}
+.gpm-toast-exit {
+  animation: gpm-toast-out 300ms ease forwards;
+}
+.gpm-toast-message {
+  flex: 1;
+}
+.gpm-toast-undo {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: 'Google Sans', sans-serif;
+}
+.gpm-toast-undo:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+.gpm-toast-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 0 0 8px 8px;
+  width: 100%;
+}
+@keyframes gpm-toast-in {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes gpm-toast-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
 }

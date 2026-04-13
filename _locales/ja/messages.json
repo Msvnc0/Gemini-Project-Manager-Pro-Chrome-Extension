@@ -5,27 +5,6 @@
   "extensionDescription": {
     "message": "Geminiサイドバーをプロジェクト、フォルダ、クイックコマンドを備えたプロフェッショナルなワークスペースに変換します。"
   },
-  "tags": {
-    "message": "タグ"
-  },
-  "createTag": {
-    "message": "タグを作成"
-  },
-  "tagName": {
-    "message": "タグ名"
-  },
-  "tagNamePlaceholder": {
-    "message": "タグ名を入力..."
-  },
-  "tagColor": {
-    "message": "タグの色"
-  },
-  "noTags": {
-    "message": "タグはまだありません"
-  },
-  "maxTagsReached": {
-    "message": "1つのチャットに最大5つのタグ"
-  },
   "favorites": {
     "message": "スター付き"
   },
@@ -44,17 +23,11 @@
   "moveSelected": {
     "message": "選択項目を移動"
   },
-  "tagSelected": {
-    "message": "選択項目にタグ付け"
-  },
   "deleteSelected": {
     "message": "選択項目を削除"
   },
   "movedChats": {
     "message": "{count}件のチャットを移動しました"
-  },
-  "taggedChats": {
-    "message": "{count}件のチャットにタグを付けました"
   },
   "removedChats": {
     "message": "{count}件のチャットを削除しました"

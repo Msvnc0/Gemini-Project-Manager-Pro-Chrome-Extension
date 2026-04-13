@@ -63,6 +63,7 @@ globalThis.extractChatIdFromUrl = function extractChatIdFromUrl(urlOrHref) {
 const navCode = readFileSync(resolve('src/navigation.js'), 'utf-8');
 
 const patchedCode = navCode
+  .replace(/^function gpmNavigateToUrl\b/m, 'globalThis.gpmNavigateToUrl = function gpmNavigateToUrl')
   .replace(/^function gpmTriggerNewChat\b/m, 'globalThis.gpmTriggerNewChat = function gpmTriggerNewChat')
   .replace(/^function gpmNavigateToChat\b/m, 'globalThis.gpmNavigateToChat = function gpmNavigateToChat')
   .replace(/^function gpmGetCurrentChatId\b/m, 'globalThis.gpmGetCurrentChatId = function gpmGetCurrentChatId')
@@ -73,6 +74,7 @@ const patchedCode = navCode
 
 new Function(patchedCode)();
 
+const gpmNavigateToUrl = globalThis.gpmNavigateToUrl;
 const gpmTriggerNewChat = globalThis.gpmTriggerNewChat;
 const gpmNavigateToChat = globalThis.gpmNavigateToChat;
 const gpmGetCurrentChatId = globalThis.gpmGetCurrentChatId;
@@ -133,14 +135,13 @@ describe('gpmNavigateToChat()', () => {
     link.remove();
   });
 
-  it('should fallback to window.location.href when no link found', () => {
-    // Remove any existing /app/ links
+  it('should fallback to navigation helper when no link found', () => {
     document.querySelectorAll('a[href^="/app/"]').forEach(el => el.remove());
+    const navSpy = vi.spyOn(globalThis, 'gpmNavigateToUrl');
 
-    const originalHref = window.location.href;
-    // gpmNavigateToChat sets window.location.href — in jsdom this may throw
-    // but we can verify the function doesn't crash
-    expect(() => gpmNavigateToChat('nonexistent999')).not.toThrow();
+    gpmNavigateToChat('nonexistent999');
+
+    expect(navSpy).toHaveBeenCalledWith('https://gemini.google.com/app/nonexistent999');
   });
 });
 

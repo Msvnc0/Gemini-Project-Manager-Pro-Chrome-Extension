@@ -36,33 +36,10 @@ const GPMFavoritesManager = (() => {
     return favorites.includes(projectId);
   }
 
-  async function addFavorite(projectId) {
-    const favorites = await getFavorites();
-    if (!favorites.includes(projectId)) {
-      favorites.push(projectId);
-      await saveFavorites(favorites);
-    }
-  }
-
-  async function removeFavorite(projectId) {
-    const favorites = await getFavorites();
-    const filtered = favorites.filter((id) => id !== projectId);
-    await saveFavorites(filtered);
-  }
-
-  async function getFavoriteProjects() {
-    const favorites = await getFavorites();
-    const projects = await GPMStorage.getProjects();
-    return projects.filter((p) => favorites.includes(p.id));
-  }
-
   return {
     getFavorites,
     saveFavorites,
     toggleFavorite,
     isFavorite,
-    addFavorite,
-    removeFavorite,
-    getFavoriteProjects,
   };
 })();

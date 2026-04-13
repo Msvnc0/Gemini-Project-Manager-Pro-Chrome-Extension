@@ -5,27 +5,6 @@
   "extensionDescription": {
     "message": "Gemini साइडबार को Projects, Folders और Quick Prompts के साथ एक प्रोफेशनल वर्कस्पेस में बदलें।"
   },
-  "tags": {
-    "message": "टैग"
-  },
-  "createTag": {
-    "message": "टैग बनाएं"
-  },
-  "tagName": {
-    "message": "टैग नाम"
-  },
-  "tagNamePlaceholder": {
-    "message": "टैग नाम दर्ज करें..."
-  },
-  "tagColor": {
-    "message": "टैग रंग"
-  },
-  "noTags": {
-    "message": "अभी कोई टैग नहीं"
-  },
-  "maxTagsReached": {
-    "message": "प्रति चैट अधिकतम 5 टैग"
-  },
   "favorites": {
     "message": "स्टार किए गए"
   },
@@ -44,17 +23,11 @@
   "moveSelected": {
     "message": "चयनित को स्थानांतरित करें"
   },
-  "tagSelected": {
-    "message": "चयनित को टैग करें"
-  },
   "deleteSelected": {
     "message": "चयनित को हटाएं"
   },
   "movedChats": {
     "message": "{count} चैट स्थानांतरित"
-  },
-  "taggedChats": {
-    "message": "{count} चैट टैग किए गए"
   },
   "removedChats": {
     "message": "{count} चैट हटाए गए"

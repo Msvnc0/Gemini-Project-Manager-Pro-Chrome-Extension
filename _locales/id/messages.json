@@ -5,27 +5,6 @@
   "extensionDescription": {
     "message": "Ubah sidebar Gemini menjadi ruang kerja profesional dengan proyek, folder, dan prompt cepat."
   },
-  "tags": {
-    "message": "Tag"
-  },
-  "createTag": {
-    "message": "Buat Tag"
-  },
-  "tagName": {
-    "message": "Nama Tag"
-  },
-  "tagNamePlaceholder": {
-    "message": "Masukkan nama tag..."
-  },
-  "tagColor": {
-    "message": "Warna Tag"
-  },
-  "noTags": {
-    "message": "Belum ada tag"
-  },
-  "maxTagsReached": {
-    "message": "Maksimal 5 tag per chat"
-  },
   "favorites": {
     "message": "Berbintang"
   },
@@ -44,17 +23,11 @@
   "moveSelected": {
     "message": "Pindahkan yang dipilih"
   },
-  "tagSelected": {
-    "message": "Tag yang dipilih"
-  },
   "deleteSelected": {
     "message": "Hapus yang dipilih"
   },
   "movedChats": {
     "message": "{count} chat dipindahkan"
-  },
-  "taggedChats": {
-    "message": "{count} chat ditandai"
   },
   "removedChats": {
     "message": "{count} chat dihapus"

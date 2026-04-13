@@ -13,7 +13,6 @@
  *   - backup/           → Multiple backup versions
  *   - sync/             → Cross-device sync, conflict resolution
  *   - templates/        → Folder templates
- *   - tags/             → Tags/labels system
  *   - keyboard/         → Keyboard shortcuts
  *   - history/          → Undo/redo system
  *   - performance/      → Virtualized list
@@ -25,7 +24,10 @@
 // ══════════════════════════════════════
 
 let _spaObserversActive = false;
-let _initialized = false;
+
+function gpmResetObserversFlag() {
+  _spaObserversActive = false;
+}
 
 async function gpmInit() {
   if (GPM_STATE.initialized) return;
@@ -136,23 +138,7 @@ async function gpmInit() {
   // ── Step 12: Start DOM health monitor ──
   gpmStartHealthMonitor();
 
-  // ── Step 13: Initialize tag filter bar ──
-  try {
-    const filterBar = await GPMTagUI.createTagFilterBar((tagIds) => {
-      GPM_STATE.activeTagFilters = tagIds;
-      gpmRenderTree();
-    });
-    if (GPM_STATE.container) {
-      const header = GPM_STATE.container.querySelector('[data-gpm="header"]');
-      if (header) {
-        header.after(filterBar);
-      }
-    }
-  } catch (e) {
-    console.warn('[GPM] Tag filter bar init failed:', e);
-  }
-
-  // ── Step 14: Start sync monitoring ──
+  // ── Step 13: Start sync monitoring ──
   try {
     if (typeof GPMSyncManager !== 'undefined') {
       await GPMSyncManager.startAutoSync();
@@ -168,13 +154,21 @@ async function gpmInit() {
 //  EXTENSION UPDATE HANDLER
 // ══════════════════════════════════════
 
+function gpmScheduleSyncRender() {
+  clearTimeout(GPM_STATE.syncTimeout);
+  GPM_STATE.syncTimeout = setTimeout(() => {
+    if (gpmIsContextValid() && GPM_STATE.initialized) {
+      gpmRenderTree();
+    }
+  }, GPM_CONFIG.SYNC_DEBOUNCE);
+}
+
 try {
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (!gpmIsContextValid()) return;
 
     if (msg.type === 'GPM_SYNC') {
-      clearTimeout(GPM_STATE.syncTimeout);
-      GPM_STATE.syncTimeout = setTimeout(() => gpmRenderTree(), GPM_CONFIG.SYNC_DEBOUNCE);
+      gpmScheduleSyncRender();
     }
 
     if (msg.type === 'GPM_EXTENSION_UPDATED') {
@@ -186,19 +180,28 @@ try {
   gpmWarn('Could not register message listener:', e.message);
 }
 
-// ══════════════════════════════════════
-//  TEMPLATE APPLICATION
-// ══════════════════════════════════════
+try {
+  if (chrome.storage?.onChanged?.addListener) {
+    chrome.storage.onChanged.addListener((changes, areaName) => {
+      if (!gpmIsContextValid() || areaName !== 'local') return;
 
-async function gpmApplyTemplate(templateId) {
-  if (typeof applyTemplate !== 'undefined') {
-    const success = await applyTemplate(templateId);
-    if (success) {
-      GPMUsageTracker.trackFeatureUsage('template_' + templateId);
-    }
-    return success;
+      const relevantKeys = ['gpm_projects', 'gpm_chatMap', 'gpm_quickPrompts', 'gpm_settings'];
+
+      if (relevantKeys.some((key) => key in changes)) {
+        gpmScheduleSyncRender();
+      }
+
+      if ('gpm_lastExtensionUpdate' in changes) {
+        const updateInfo = changes.gpm_lastExtensionUpdate?.newValue;
+        if (updateInfo?.version === chrome.runtime.getManifest().version) {
+          console.log('[GPM] Extension updated to v' + updateInfo.version);
+          GPMContextRecovery.showRecoveryUI();
+        }
+      }
+    });
   }
-  return false;
+} catch (e) {
+  gpmWarn('Could not register storage change listener:', e.message);
 }
 
 // ══════════════════════════════════════

@@ -5,27 +5,6 @@
   "extensionDescription": {
     "message": "Gemini সাইডবারকে প্রজেক্ট, ফোল্ডার এবং দ্রুত প্রম্পট সহ একটি পেশাদার কর্মক্ষেত্রে রূপান্তর করুন।"
   },
-  "tags": {
-    "message": "ট্যাগ"
-  },
-  "createTag": {
-    "message": "ট্যাগ তৈরি করুন"
-  },
-  "tagName": {
-    "message": "ট্যাগের নাম"
-  },
-  "tagNamePlaceholder": {
-    "message": "ট্যাগের নাম লিখুন..."
-  },
-  "tagColor": {
-    "message": "ট্যাগের রং"
-  },
-  "noTags": {
-    "message": "এখনও কোনো ট্যাগ নেই"
-  },
-  "maxTagsReached": {
-    "message": "প্রতি চ্যাটে সর্বোচ্চ ৫টি ট্যাগ"
-  },
   "favorites": {
     "message": "তারাচিহ্নিত"
   },
@@ -44,17 +23,11 @@
   "moveSelected": {
     "message": "নির্বাচিত সরান"
   },
-  "tagSelected": {
-    "message": "নির্বাচিত ট্যাগ করুন"
-  },
   "deleteSelected": {
     "message": "নির্বাচিত মুছুন"
   },
   "movedChats": {
     "message": "{count}টি চ্যাট সরানো হয়েছে"
-  },
-  "taggedChats": {
-    "message": "{count}টি চ্যাট ট্যাগ করা হয়েছে"
   },
   "removedChats": {
     "message": "{count}টি চ্যাট মুছে ফেলা হয়েছে"

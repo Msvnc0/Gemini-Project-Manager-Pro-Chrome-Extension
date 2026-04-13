@@ -9,17 +9,13 @@ const GPMValidators = (() => {
   const MAX_STRING_LENGTH = 1000;
   const MAX_NAME_LENGTH = 200;
   const MAX_CONTENT_LENGTH = 50000;
-  const MAX_TAG_NAME_LENGTH = 20;
 
   // ── Sanitization ──
 
   function sanitizeString(str, maxLength = MAX_STRING_LENGTH) {
     if (typeof str !== 'string') return '';
     return str
-      .replace(/[<>]/g, '')
-      .replace(/javascript:/gi, '')
-      .replace(/on\w+=/gi, '')
-      .replace(/data:/gi, '')
+      .replace(/[^\w\s.,!?\-_():;'"\u00A1-\uFFFF]/g, '')
       .slice(0, maxLength)
       .trim();
   }
@@ -55,14 +51,6 @@ const GPMValidators = (() => {
       return icon;
     }
     return '📁';
-  }
-
-  function sanitizeTagColor(color) {
-    const VALID_TAG_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'];
-    if (typeof color !== 'string') return '#3b82f6';
-    if (VALID_TAG_COLORS.includes(color.toLowerCase())) return color.toLowerCase();
-    if (/^#[0-9a-fA-F]{6}$/.test(color)) return color;
-    return '#3b82f6';
   }
 
   function sanitizeId(id) {
@@ -102,14 +90,11 @@ const GPMValidators = (() => {
     const projectId = sanitizeId(entry.projectId);
     if (!projectId) return null;
 
-    const tags = Array.isArray(entry.tags) ? entry.tags.map((t) => sanitizeId(t)).filter(Boolean) : [];
-
     return {
       projectId,
       alias: sanitizeName(entry.alias || ''),
       pinned: typeof entry.pinned === 'boolean' ? entry.pinned : false,
       _autoResolved: typeof entry._autoResolved === 'boolean' ? entry._autoResolved : false,
-      tags,
       starredAt: typeof entry.starredAt === 'number' ? entry.starredAt : null,
     };
   }
@@ -159,25 +144,6 @@ const GPMValidators = (() => {
     return {
       lang: validLangs.includes(s.lang) ? s.lang : 'en',
       theme: validThemes.includes(s.theme) ? s.theme : 'auto',
-    };
-  }
-
-  function validateTag(t) {
-    if (!t || typeof t !== 'object') return null;
-
-    const id = sanitizeId(t.id);
-    if (!id) return null;
-
-    const name = sanitizeString(t.name || '', MAX_TAG_NAME_LENGTH).trim();
-    if (!name) return null;
-
-    return {
-      id,
-      name,
-      color: sanitizeTagColor(t.color),
-      count: typeof t.count === 'number' ? Math.max(0, t.count) : 0,
-      createdAt: typeof t.createdAt === 'number' ? t.createdAt : Date.now(),
-      updatedAt: typeof t.updatedAt === 'number' ? t.updatedAt : Date.now(),
     };
   }
 
@@ -253,12 +219,10 @@ const GPMValidators = (() => {
     sanitizeColor,
     sanitizeIcon,
     sanitizeId,
-    sanitizeTagColor,
     validateProject,
     validateChatMapping,
     validateQuickPrompt,
     validateSettings,
-    validateTag,
     validateImportData,
     findDuplicateChat,
   };

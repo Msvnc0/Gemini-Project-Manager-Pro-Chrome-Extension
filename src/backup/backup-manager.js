@@ -140,17 +140,6 @@ const GPMBackupManager = (() => {
     }
   }
 
-  async function clearAllBackups() {
-    try {
-      await chrome.storage.local.set({ [BACKUP_KEY]: [] });
-      gpmLog('All backups cleared');
-      return true;
-    } catch (e) {
-      gpmError('Failed to clear backups:', e);
-      return false;
-    }
-  }
-
   async function autoBackupIfNeeded() {
     try {
       const backups = await getBackups();
@@ -170,12 +159,6 @@ const GPMBackupManager = (() => {
     return new Date(timestamp).toLocaleString();
   }
 
-  function formatBackupSize(backup) {
-    if (!backup?.stats) return '';
-    const { projectCount, chatCount, promptCount } = backup.stats;
-    return `${projectCount} projects, ${chatCount} chats, ${promptCount} prompts`;
-  }
-
   return {
     MAX_VERSIONS,
     TRIGGERS,
@@ -184,9 +167,7 @@ const GPMBackupManager = (() => {
     getBackup,
     restoreBackup,
     deleteBackup,
-    clearAllBackups,
     autoBackupIfNeeded,
     formatBackupDate,
-    formatBackupSize,
   };
 })();

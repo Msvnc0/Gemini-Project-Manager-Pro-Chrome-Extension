@@ -477,10 +477,17 @@ const GPMUI = (() => {
   //  CONTEXT MENU
   // ══════════════════════════════════════
   function showContextMenu(shadowRoot, { x, y, items }) {
-    // Remove any existing context menu
     shadowRoot.querySelectorAll('.gpm-context-menu').forEach((m) => m.remove());
 
     const menu = el('div', { className: 'gpm-context-menu', role: 'menu', style: { left: x + 'px', top: y + 'px' } });
+
+    const closeHandler = (e) => {
+      if (!menu.contains(e.target)) {
+        menu.remove();
+        shadowRoot.removeEventListener('click', closeHandler, true);
+        document.removeEventListener('click', closeHandler, true);
+      }
+    };
 
     items.forEach((item) => {
       if (item.divider) {
@@ -512,7 +519,7 @@ const GPMUI = (() => {
                 className: 'gpm-context-item',
                 type: 'button',
                 onClick: () => {
-                  menu.remove();
+                  closeHandler({ target: null });
                   sub.action?.();
                 },
               },
@@ -543,7 +550,7 @@ const GPMUI = (() => {
           className: `gpm-context-item${item.danger ? ' gpm-danger' : ''}`,
           type: 'button',
           onClick: () => {
-            menu.remove();
+            closeHandler({ target: null });
             item.action?.();
           },
         },
@@ -555,10 +562,7 @@ const GPMUI = (() => {
       menu.appendChild(btn);
     });
 
-    // Reposition if overflowing viewport — use viewport coordinates directly
-    // (Shadow DOM host has width:0/height:0 so getBoundingClientRect may be unreliable)
     shadowRoot.appendChild(menu);
-    // Force layout so we can measure the menu dimensions
     const menuWidth = menu.offsetWidth || 180;
     const menuHeight = menu.offsetHeight || 200;
     let finalX = x;
@@ -568,14 +572,6 @@ const GPMUI = (() => {
     menu.style.left = finalX + 'px';
     menu.style.top = finalY + 'px';
 
-    // Close on outside click
-    const closeHandler = (e) => {
-      if (!menu.contains(e.target)) {
-        menu.remove();
-        shadowRoot.removeEventListener('click', closeHandler, true);
-        document.removeEventListener('click', closeHandler, true);
-      }
-    };
     setTimeout(() => {
       shadowRoot.addEventListener('click', closeHandler, true);
       document.addEventListener('click', closeHandler, true);
@@ -1195,10 +1191,14 @@ const GPMUI = (() => {
       ]
     );
 
-    const contentEl = el('div', {
-      className: 'gpm-modal-content',
-      innerHTML: content,
-    });
+    const contentEl = el('div', { className: 'gpm-modal-content' });
+    if (typeof content === 'string') {
+      const temp = document.createElement('div');
+      temp.textContent = content;
+      contentEl.textContent = temp.textContent;
+    } else if (content instanceof Node) {
+      contentEl.appendChild(content);
+    }
 
     const footer = el(
       'div',
@@ -1239,138 +1239,197 @@ const GPMUI = (() => {
   function showTemplateDialog(shadowRoot, onSelect) {
     const templates = typeof getTemplateList === 'function' ? getTemplateList() : [];
 
-    const content = `
-      <p style="margin-bottom: 16px; opacity: 0.8;">
-        Hazır klasör yapısı seçin:
-      </p>
-      <div class="gpm-template-list">
-        ${templates
-          .map(
-            (t) => `
-          <button class="gpm-template-item" data-template-id="${t.id}" style="
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            width: 100%;
-            padding: 12px;
-            margin-bottom: 8px;
-            background: var(--gpm-bg);
-            border: 1px solid var(--gpm-border);
-            border-radius: 8px;
-            cursor: pointer;
-            text-align: left;
-          ">
-            <span style="font-size: 24px;">${t.icon}</span>
-            <div>
-              <div style="font-weight: 500;">${t.name}</div>
-              <div style="font-size: 12px; opacity: 0.6;">${t.description || ''}</div>
-            </div>
-          </button>
-        `
-          )
-          .join('')}
-      </div>
-    `;
-
     const overlay = createModal(shadowRoot, {
-      title: '📁 Şablondan Oluştur',
-      content,
-      buttons: [{ text: 'İptal', class: 'gpm-btn-ghost', action: 'cancel' }],
+      title:
+        '\uD83D\uDCC1 ' +
+        (typeof t === 'function' ? t('createFromTemplate') || 'Create from Template' : 'Create from Template'),
+      content: null,
+      buttons: [
+        {
+          text: typeof t === 'function' ? t('cancel') || 'Cancel' : 'Cancel',
+          class: 'gpm-btn-ghost',
+          action: 'cancel',
+        },
+      ],
     });
 
-    overlay.querySelectorAll('.gpm-template-item').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const templateId = btn.dataset.templateId;
-        overlay.remove();
-        onSelect?.(templateId);
-      });
+    const modalContent = overlay.querySelector('.gpm-modal-content');
+    if (!modalContent) return;
 
-      btn.addEventListener('mouseenter', () => {
-        btn.style.background = 'var(--gpm-bg-hover)';
-      });
-      btn.addEventListener('mouseleave', () => {
-        btn.style.background = 'var(--gpm-bg)';
-      });
+    const desc = el('p', {
+      textContent:
+        typeof t === 'function'
+          ? t('selectTemplateDesc') || 'Select a folder structure:'
+          : 'Select a folder structure:',
+      style: { marginBottom: '16px', opacity: '0.8' },
     });
+    modalContent.appendChild(desc);
+
+    const list = el('div', { className: 'gpm-template-list' });
+    templates.forEach((tmpl) => {
+      const item = el(
+        'button',
+        {
+          type: 'button',
+          className: 'gpm-template-item',
+          'data-template-id': tmpl.id,
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            width: '100%',
+            padding: '12px',
+            marginBottom: '8px',
+            background: 'var(--gpm-bg)',
+            border: '1px solid var(--gpm-border)',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            textAlign: 'left',
+          },
+          onClick: () => {
+            overlay.remove();
+            onSelect?.(tmpl.id);
+          },
+        },
+        [
+          el('span', { textContent: tmpl.icon, style: { fontSize: '24px' } }),
+          el('div', {}, [
+            el('div', { textContent: tmpl.name, style: { fontWeight: '500' } }),
+            el('div', { textContent: tmpl.description || '', style: { fontSize: '12px', opacity: '0.6' } }),
+          ]),
+        ]
+      );
+      item.addEventListener('mouseenter', () => {
+        item.style.background = 'var(--gpm-bg-hover)';
+      });
+      item.addEventListener('mouseleave', () => {
+        item.style.background = 'var(--gpm-bg)';
+      });
+      list.appendChild(item);
+    });
+    modalContent.appendChild(list);
   }
 
   // ── Backup Panel ──
   async function showBackupPanel(shadowRoot) {
     const backups = typeof GPMBackupManager !== 'undefined' ? await GPMBackupManager.getBackups() : [];
 
-    const content = `
-      <div style="margin-bottom: 16px;">
-        <button class="gpm-btn gpm-btn-primary" id="gpm-create-backup" style="width: 100%;">
-          + ${t('newBackup')}
-        </button>
-      </div>
-      ${
-        backups.length === 0
-          ? `
-        <div style="text-align: center; padding: 20px; opacity: 0.6;">
-          ${t('noBackupsYet')}
-        </div>
-      `
-          : `
-        <div style="max-height: 300px; overflow-y: auto;">
-          ${backups
-            .map(
-              (b) => `
-            <div class="gpm-backup-item" data-backup-id="${b.id}" style="
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              padding: 12px;
-              margin-bottom: 8px;
-              background: var(--gpm-bg);
-              border: 1px solid var(--gpm-border);
-              border-radius: 8px;
-            ">
-              <div>
-                <div style="font-weight: 500;">${GPMBackupManager.formatBackupDate(b.timestamp)}</div>
-                <div style="font-size: 12px; opacity: 0.6;">
-                  ${t('projectsCount').replace('{count}', b.stats?.projectCount || 0)}, ${t('chatsCount').replace('{count}', b.stats?.chatCount || 0)}
-                </div>
-              </div>
-              <button class="gpm-btn gpm-btn-sm" data-action="restore">${t('restoreThisBackup')}</button>
-            </div>
-          `
-            )
-            .reverse()
-            .join('')}
-        </div>
-      `
-      }
-    `;
-
     const overlay = createModal(shadowRoot, {
-      title: '📦 ' + t('manageBackups'),
-      content,
+      title: '\uD83D\uDCE6 ' + t('manageBackups'),
+      content: null,
       buttons: [{ text: t('cancel'), class: 'gpm-btn-ghost', action: 'close' }],
     });
 
-    overlay.querySelector('#gpm-create-backup')?.addEventListener('click', async () => {
-      if (typeof GPMBackupManager !== 'undefined') {
-        await GPMBackupManager.createBackup('manual', t('newBackup'));
-        overlay.remove();
-        showBackupPanel(shadowRoot);
-      }
-    });
+    const modalContent = overlay.querySelector('.gpm-modal-content');
+    if (!modalContent) return;
 
-    overlay.querySelectorAll('[data-action="restore"]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const backupItem = btn.closest('.gpm-backup-item');
-        const backupId = backupItem?.dataset.backupId;
-        if (backupId && typeof GPMBackupManager !== 'undefined') {
-          const confirmed = confirm(t('restoreBackupConfirm'));
-          if (confirmed) {
-            await GPMBackupManager.restoreBackup(backupId);
-            gpmRenderTree();
-            overlay.remove();
-          }
+    const createBtn = el('button', {
+      className: 'gpm-btn gpm-btn-primary',
+      textContent: '+ ' + t('newBackup'),
+      type: 'button',
+      style: { width: '100%', marginBottom: '16px' },
+      onClick: async () => {
+        if (typeof GPMBackupManager !== 'undefined') {
+          await GPMBackupManager.createBackup('manual', t('newBackup'));
+          overlay.remove();
+          showBackupPanel(shadowRoot);
         }
-      });
+      },
     });
+    modalContent.appendChild(createBtn);
+
+    if (backups.length === 0) {
+      modalContent.appendChild(
+        el('div', {
+          textContent: t('noBackupsYet'),
+          style: { textAlign: 'center', padding: '20px', opacity: '0.6' },
+        })
+      );
+    } else {
+      const listWrap = el('div', { style: { maxHeight: '300px', overflowY: 'auto' } });
+      [...backups].reverse().forEach((b) => {
+        const item = el(
+          'div',
+          {
+            className: 'gpm-backup-item',
+            'data-backup-id': b.id,
+            style: {
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '12px',
+              marginBottom: '8px',
+              background: 'var(--gpm-bg)',
+              border: '1px solid var(--gpm-border)',
+              borderRadius: '8px',
+            },
+          },
+          [
+            el('div', {}, [
+              el('div', {
+                textContent:
+                  typeof GPMBackupManager !== 'undefined'
+                    ? GPMBackupManager.formatBackupDate(b.timestamp)
+                    : new Date(b.timestamp).toLocaleString(),
+                style: { fontWeight: '500' },
+              }),
+              el('div', {
+                textContent:
+                  t('projectsCount').replace('{count}', b.stats?.projectCount || 0) +
+                  ', ' +
+                  t('chatsCount').replace('{count}', b.stats?.chatCount || 0),
+                style: { fontSize: '12px', opacity: '0.6' },
+              }),
+            ]),
+            el('div', { style: { display: 'flex', gap: '8px' } }, [
+              el('button', {
+                className: 'gpm-btn gpm-btn-sm',
+                textContent: t('restoreThisBackup'),
+                type: 'button',
+                'data-action': 'restore',
+                onClick: async () => {
+                  if (typeof GPMBackupManager !== 'undefined') {
+                    showConfirmDialog(shadowRoot, {
+                      title: t('restoreBackup'),
+                      message: t('restoreBackupConfirm') || t('restoreConfirm'),
+                      confirmText: t('restoreBackup'),
+                      onConfirm: async () => {
+                        await GPMBackupManager.restoreBackup(b.id);
+                        gpmRenderTree();
+                        overlay.remove();
+                      },
+                    });
+                  }
+                },
+              }),
+              el('button', {
+                className: 'gpm-btn gpm-btn-sm gpm-btn-ghost',
+                textContent: '🗑',
+                title: t('delete'),
+                type: 'button',
+                style: { padding: '4px 8px', fontSize: '14px', color: '#f44336' },
+                onClick: async () => {
+                  if (typeof GPMBackupManager !== 'undefined') {
+                    showConfirmDialog(shadowRoot, {
+                      title: t('delete'),
+                      message: t('deleteBackupConfirm'),
+                      confirmText: t('delete'),
+                      onConfirm: async () => {
+                        await GPMBackupManager.deleteBackup(b.id);
+                        overlay.remove();
+                        showBackupPanel(shadowRoot);
+                      },
+                    });
+                  }
+                },
+              }),
+            ]),
+          ]
+        );
+        listWrap.appendChild(item);
+      });
+      modalContent.appendChild(listWrap);
+    }
   }
 
   return {

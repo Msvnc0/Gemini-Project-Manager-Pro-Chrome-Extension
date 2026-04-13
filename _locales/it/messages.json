@@ -5,27 +5,6 @@
   "extensionDescription": {
     "message": "Trasforma la barra laterale di Gemini in uno spazio di lavoro professionale con progetti, cartelle e comandi rapidi."
   },
-  "tags": {
-    "message": "Tag"
-  },
-  "createTag": {
-    "message": "Crea tag"
-  },
-  "tagName": {
-    "message": "Nome tag"
-  },
-  "tagNamePlaceholder": {
-    "message": "Inserisci nome tag..."
-  },
-  "tagColor": {
-    "message": "Colore tag"
-  },
-  "noTags": {
-    "message": "Nessun tag ancora"
-  },
-  "maxTagsReached": {
-    "message": "Massimo 5 tag per chat"
-  },
   "favorites": {
     "message": "Preferiti"
   },
@@ -44,17 +23,11 @@
   "moveSelected": {
     "message": "Sposta selezionati"
   },
-  "tagSelected": {
-    "message": "Tagga selezionati"
-  },
   "deleteSelected": {
     "message": "Elimina selezionati"
   },
   "movedChats": {
     "message": "{count} chat spostate"
-  },
-  "taggedChats": {
-    "message": "{count} chat taggate"
   },
   "removedChats": {
     "message": "{count} chat rimosse"

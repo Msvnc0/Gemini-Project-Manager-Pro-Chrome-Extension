@@ -1,7 +1,7 @@
 /**
  * selectors.test.js — Unit Tests for selectors.js
  *
- * Tests: GPM_SELECTORS, gpmQuerySelector(), gpmQuerySelectorAll(),
+ * Tests: GPM_SELECTORS, gpmQuerySelector(),
  *        gpmClearSelectorCache(), _gpmStructuralDiscovery
  */
 
@@ -19,7 +19,6 @@ const patchedCode = selectorsCode
   .replace(/^const _gpmSelectorCache\s*=/m, 'globalThis._gpmSelectorCache =')
   .replace(/^const _gpmStructuralDiscovery\s*=/m, 'globalThis._gpmStructuralDiscovery =')
   .replace(/^function gpmQuerySelector\b/m, 'globalThis.gpmQuerySelector = function gpmQuerySelector')
-  .replace(/^function gpmQuerySelectorAll\b/m, 'globalThis.gpmQuerySelectorAll = function gpmQuerySelectorAll')
   .replace(/^function gpmClearSelectorCache\b/m, 'globalThis.gpmClearSelectorCache = function gpmClearSelectorCache');
 
 new Function(patchedCode)();
@@ -28,7 +27,6 @@ const GPM_SELECTORS = globalThis.GPM_SELECTORS;
 const _gpmSelectorCache = globalThis._gpmSelectorCache;
 const _gpmStructuralDiscovery = globalThis._gpmStructuralDiscovery;
 const gpmQuerySelector = globalThis.gpmQuerySelector;
-const gpmQuerySelectorAll = globalThis.gpmQuerySelectorAll;
 const gpmClearSelectorCache = globalThis.gpmClearSelectorCache;
 
 // ══════════════════════════════════════
@@ -38,10 +36,18 @@ const gpmClearSelectorCache = globalThis.gpmClearSelectorCache;
 describe('GPM_SELECTORS', () => {
   it('should have all required selector keys', () => {
     const requiredKeys = [
-      'sidebar', 'chatItem', 'newChatButton', 'inputArea',
-      'inputContainer', 'darkModeIndicator', 'leadingActions',
-      'toolboxDrawer', 'toolboxButtonContainer', 'chatHistory',
-      'gemsList', 'sideNavEntry'
+      'sidebar',
+      'chatItem',
+      'newChatButton',
+      'inputArea',
+      'inputContainer',
+      'darkModeIndicator',
+      'leadingActions',
+      'toolboxDrawer',
+      'toolboxButtonContainer',
+      'chatHistory',
+      'gemsList',
+      'sideNavEntry',
     ];
     for (const key of requiredKeys) {
       expect(GPM_SELECTORS).toHaveProperty(key);
@@ -50,7 +56,7 @@ describe('GPM_SELECTORS', () => {
   });
 
   it('should have sidebar selector with multiple fallbacks', () => {
-    const parts = GPM_SELECTORS.sidebar.split(',').map(s => s.trim());
+    const parts = GPM_SELECTORS.sidebar.split(',').map((s) => s.trim());
     expect(parts.length).toBeGreaterThanOrEqual(3);
   });
 
@@ -135,37 +141,6 @@ describe('gpmQuerySelector()', () => {
     // Should not return the disconnected cached element
     expect(result).not.toBe(el);
     expect(_gpmSelectorCache['chatHistory']).toBeUndefined();
-  });
-});
-
-// ══════════════════════════════════════
-//  gpmQuerySelectorAll() Tests
-// ══════════════════════════════════════
-
-describe('gpmQuerySelectorAll()', () => {
-  it('should return all matching elements', () => {
-    const el1 = document.createElement('a');
-    el1.setAttribute('href', '/app/chat1');
-    const el2 = document.createElement('a');
-    el2.setAttribute('href', '/app/chat2');
-    document.body.appendChild(el1);
-    document.body.appendChild(el2);
-
-    const results = gpmQuerySelectorAll('chatItem');
-    expect(results.length).toBeGreaterThanOrEqual(2);
-
-    el1.remove();
-    el2.remove();
-  });
-
-  it('should return empty array for unknown key', () => {
-    const results = gpmQuerySelectorAll('unknownKey');
-    expect(results).toEqual([]);
-  });
-
-  it('should return empty NodeList when no matches', () => {
-    const results = gpmQuerySelectorAll('chatHistory');
-    expect(results.length).toBe(0);
   });
 });
 

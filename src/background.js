@@ -8,7 +8,7 @@
  *   GPM_MIGRATIONS — ordered list of migration functions
  */
 
-const CURRENT_SCHEMA_VERSION = 1;
+const CURRENT_SCHEMA_VERSION = 5;
 
 /**
  * Migration registry — ordered list of migrations.
@@ -24,7 +24,83 @@ const CURRENT_SCHEMA_VERSION = 1;
  *   }}
  */
 const GPM_MIGRATIONS = [
-  // No migrations yet — schema version 1 is the baseline
+  {
+    fromVersion: 0,
+    toVersion: 1,
+    migrate: (data) => {
+      (data.gpm_projects || []).forEach((p) => {
+        if (!p.createdAt) p.createdAt = Date.now();
+        if (!p.updatedAt) p.updatedAt = Date.now();
+      });
+      return data;
+    },
+  },
+  {
+    fromVersion: 1,
+    toVersion: 2,
+    migrate: (data) => {
+      if (!data.gpm_backups) data.gpm_backups = [];
+      return data;
+    },
+  },
+  {
+    fromVersion: 2,
+    toVersion: 3,
+    migrate: (data) => {
+      if (data.gpm_chatMap && typeof data.gpm_chatMap === 'object') {
+        for (const chatId of Object.keys(data.gpm_chatMap)) {
+          if (data.gpm_chatMap[chatId].starredAt === undefined) {
+            data.gpm_chatMap[chatId].starredAt = null;
+          }
+        }
+      }
+      return data;
+    },
+  },
+  {
+    fromVersion: 3,
+    toVersion: 4,
+    migrate: (data) => {
+      if (data.gpm_chatMap && typeof data.gpm_chatMap === 'object') {
+        for (const chatId of Object.keys(data.gpm_chatMap)) {
+          if (data.gpm_chatMap[chatId].starredAt === undefined) {
+            data.gpm_chatMap[chatId].starredAt = null;
+          }
+          if (data.gpm_chatMap[chatId].tags) {
+            delete data.gpm_chatMap[chatId].tags;
+          }
+        }
+      }
+      if (data.gpm_tags) {
+        delete data.gpm_tags;
+      }
+      return data;
+    },
+  },
+  {
+    fromVersion: 4,
+    toVersion: 5,
+    migrate: (data) => {
+      const legacyKeys = [
+        'gpm_projects_backup',
+        'gpm_backup_ts',
+        'gpm_chatMap_backup',
+        'gpm_pre_import_projects',
+        'gpm_pre_import_chatMap',
+        'gpm_pre_import_quickPrompts',
+        'gpm_pre_import_ts',
+        'gpm_pre_migration_backup',
+        'gpm_update_backup',
+        'gpm_emergency_backup_before_reset',
+        'gpm_projects_pre_restore',
+        'gpm_backups',
+      ];
+      for (const key of legacyKeys) {
+        if (data[key] !== undefined) delete data[key];
+      }
+      return data;
+    },
+  },
 ];
 
 /**
@@ -42,6 +118,8 @@ async function gpmRunMigrations(currentVersion) {
     return;
   }
 
+  const allData = await chrome.storage.local.get(null);
+
   console.log(
     '[GPM] Running',
     applicable.length,
@@ -49,21 +127,23 @@ async function gpmRunMigrations(currentVersion) {
     'to v' + CURRENT_SCHEMA_VERSION
   );
 
-  // Pre-migration backup
-  const allData = await chrome.storage.local.get(null);
-  await chrome.storage.local.set({
-    gpm_pre_migration_backup: {
-      data: {
-        gpm_projects: allData.gpm_projects || [],
-        gpm_chatMap: allData.gpm_chatMap || {},
-        gpm_quickPrompts: allData.gpm_quickPrompts || [],
-        gpm_settings: allData.gpm_settings || { lang: 'en', theme: 'auto' },
+  const bytesUsed = await chrome.storage.local.getBytesInUse(null);
+  if (bytesUsed <= 8 * 1024 * 1024) {
+    await chrome.storage.local.set({
+      gpm_backup_current: {
+        type: 'pre_migration',
+        data: {
+          projects: allData.gpm_projects || [],
+          chatMap: allData.gpm_chatMap || {},
+          prompts: allData.gpm_quickPrompts || [],
+          settings: allData.gpm_settings || { lang: 'en', theme: 'auto' },
+        },
+        fromVersion: currentVersion,
+        timestamp: Date.now(),
       },
-      fromVersion: currentVersion,
-      timestamp: Date.now(),
-    },
-  });
-  console.log('[GPM] Pre-migration backup saved');
+    });
+    console.log('[GPM] Pre-migration backup saved');
+  }
 
   // Run migrations sequentially
   let data = {
@@ -131,8 +211,15 @@ async function createUpdateBackup(previousVersion) {
   try {
     const allData = await chrome.storage.local.get(null);
 
+    const bytesUsed = await chrome.storage.local.getBytesInUse(null);
+    if (bytesUsed > 8 * 1024 * 1024) {
+      console.log('[GPM] Skipping update backup, quota usage high');
+      return;
+    }
+
     await chrome.storage.local.set({
-      gpm_update_backup: {
+      gpm_backup_current: {
+        type: 'update',
         data: {
           projects: allData.gpm_projects || [],
           chatMap: allData.gpm_chatMap || {},
@@ -151,47 +238,64 @@ async function createUpdateBackup(previousVersion) {
 }
 
 /**
- * Notify all Gemini tabs that the extension has been updated.
- * Content script will show a recovery UI asking user to reload.
+ * Mark extension update in storage so content scripts can react without tabs permission.
  */
 async function notifyTabsAboutUpdate() {
   try {
-    const tabs = await chrome.tabs.query({ url: 'https://gemini.google.com/*' });
     const newVersion = chrome.runtime.getManifest().version;
-
-    for (const tab of tabs) {
-      try {
-        await chrome.tabs.sendMessage(tab.id, {
-          type: 'GPM_EXTENSION_UPDATED',
-          newVersion,
-        });
-      } catch (e) {
-        // Tab may not have content script loaded yet
-      }
-    }
-
-    console.log('[GPM] Notified', tabs.length, 'tab(s) about update to v' + newVersion);
+    await chrome.storage.local.set({
+      gpm_lastExtensionUpdate: {
+        version: newVersion,
+        timestamp: Date.now(),
+      },
+    });
+    console.log('[GPM] Update marker saved for v' + newVersion);
   } catch (e) {
-    console.error('[GPM] Failed to notify tabs:', e);
+    console.error('[GPM] Failed to save update marker:', e);
   }
 }
 
-// Message relay between content script instances (if needed for multi-tab sync)
+const GPM_WRITE_LOCK_TIMEOUT = 5000;
+let _writeLockHolder = null;
+let _writeLockTimer = null;
+
+function gpmAcquireWriteLock(tabId) {
+  if (_writeLockHolder !== null && _writeLockHolder !== tabId) {
+    return false;
+  }
+  _writeLockHolder = tabId;
+  clearTimeout(_writeLockTimer);
+  _writeLockTimer = setTimeout(() => {
+    _writeLockHolder = null;
+  }, GPM_WRITE_LOCK_TIMEOUT);
+  return true;
+}
+
+function gpmReleaseWriteLock(tabId) {
+  if (_writeLockHolder === tabId) {
+    _writeLockHolder = null;
+    clearTimeout(_writeLockTimer);
+  }
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'GPM_ACQUIRE_LOCK') {
+    const tabId = sender.tab?.id;
+    sendResponse({ granted: gpmAcquireWriteLock(tabId) });
+    return;
+  }
+
+  if (message.type === 'GPM_RELEASE_LOCK') {
+    const tabId = sender.tab?.id;
+    gpmReleaseWriteLock(tabId);
+    sendResponse({ ok: true });
+    return;
+  }
+
   if (message.type === 'GPM_STORAGE_UPDATED') {
-    // Broadcast to all Gemini tabs so they re-render
-    chrome.tabs.query({ url: 'https://gemini.google.com/*' }, (tabs) => {
-      tabs.forEach((tab) => {
-        if (tab.id !== sender.tab?.id) {
-          try {
-            chrome.tabs.sendMessage(tab.id, { type: 'GPM_SYNC' });
-          } catch (_) {
-            /* tab may be closed or unresponsive */
-          }
-        }
-      });
-      sendResponse({ ok: true });
-    });
+    gpmReleaseWriteLock(sender.tab?.id);
+    sendResponse({ ok: true });
+    return;
   }
   return true;
 });

@@ -28,7 +28,10 @@ const GPM_CONFIG = {
   HEALTH_CHECK_INTERVAL: 5000, // DOM health check every 5 seconds
   REINIT_DEBOUNCE: 1000, // Debounce for re-initialization attempts
   MAX_REINIT_FAILURES: 3, // Max consecutive re-init failures before backing off
-  DELETION_CHECK_DEBOUNCE: 2000, // Debounce for deleted chat detection (ms)
+  DELETION_CHECK_DEBOUNCE: 2500,
+  DELETION_CHECK_PHASES: 3,
+  SIDEBAR_STABILIZE_INTERVAL: 1500,
+  SIDEBAR_STABILIZE_REQUIRED: 2,
   DEBUG: false, // Set to true to enable console logging
 };
 
@@ -60,12 +63,14 @@ const GPM_STATE = {
   reinitFailCount: 0, // Consecutive re-init failure counter
   _qpCheckInterval: null, // Quick Prompt button check interval ID
   _qpMutationObserver: null, // Quick Prompt button MutationObserver instance
-  _deletionCheckTimer: null, // Deleted chat detection debounce timer
-  _pendingDeletedChatIds: null, // Set of chat IDs pending deletion verification
-  bulkSelection: {
-    active: false,
-    selectedChatIds: new Set(),
-  },
+  _deletionCheckTimer: null,
+  _pendingDeletedChatIds: null,
+  _deletionPhaseCount: 0,
+  _sidebarStabilized: false,
+  _sidebarStableCount: 0,
+  _lastSidebarChatCount: 0,
+  _sidebarStabilizeTimer: null,
+  _renderId: 0,
 };
 
 /**
@@ -76,13 +81,12 @@ const GPM_STATE = {
 function gpmResetState() {
   gpmLog('Resetting GPM state for re-initialization');
 
-  // Clear timers
   clearTimeout(GPM_STATE.aliasResolveTimer);
   clearTimeout(GPM_STATE.syncTimeout);
   clearTimeout(GPM_STATE.reinitDebounceTimer);
   clearTimeout(GPM_STATE._deletionCheckTimer);
+  clearTimeout(GPM_STATE._sidebarStabilizeTimer);
 
-  // Clear Quick Prompt button monitor (interval + observer)
   if (GPM_STATE._qpCheckInterval) {
     clearInterval(GPM_STATE._qpCheckInterval);
     GPM_STATE._qpCheckInterval = null;
@@ -91,22 +95,17 @@ function gpmResetState() {
     GPM_STATE._qpMutationObserver.disconnect();
     GPM_STATE._qpMutationObserver = null;
   }
-
-  // Abort outstanding native chat listeners
   if (GPM_STATE.enhanceAbortController) {
     GPM_STATE.enhanceAbortController.abort();
     GPM_STATE.enhanceAbortController = null;
   }
-
-  // Remove stale DOM references (container may have been removed by Gemini re-mount)
+  if (typeof gpmCleanupObservers === 'function') {
+    gpmCleanupObservers();
+  }
   GPM_STATE.container = null;
   GPM_STATE.modalHost = null;
   GPM_STATE.modalRoot = null;
-
-  // Clear adaptive selector cache (DOM structure may have changed)
   if (typeof gpmClearSelectorCache === 'function') gpmClearSelectorCache();
-
-  // Reset flags — allow re-initialization
   GPM_STATE.initialized = false;
   GPM_STATE.styleInjected = false;
   GPM_STATE.qpOpen = false;
@@ -115,9 +114,15 @@ function gpmResetState() {
   GPM_STATE.reinitDebounceTimer = null;
   GPM_STATE._deletionCheckTimer = null;
   GPM_STATE._pendingDeletedChatIds = null;
-
-  // NOTE: pendingChatAssignment is intentionally preserved
-  // NOTE: healthCheckTimer is NOT cleared here — the caller manages it
+  GPM_STATE._deletionPhaseCount = 0;
+  GPM_STATE._sidebarStabilized = false;
+  GPM_STATE._sidebarStableCount = 0;
+  GPM_STATE._lastSidebarChatCount = 0;
+  GPM_STATE._sidebarStabilizeTimer = null;
+  GPM_STATE.spaObserversActive = false;
+  if (typeof gpmResetObserversFlag === 'function') {
+    gpmResetObserversFlag();
+  }
 }
 
 // ── Extension context check ──
@@ -178,32 +183,6 @@ function extractChatIdFromUrl(urlOrHref) {
   if (fallbackMatch) return fallbackMatch[1];
 
   return null;
-}
-
-/**
- * Validate if a chat ID exists in Gemini's sidebar.
- * Used to verify chat existence before deletion detection.
- *
- * @param {string} chatId — The chat ID to validate
- * @returns {Promise<boolean>} — True if chat exists in sidebar
- */
-async function validateChatIdExists(chatId) {
-  if (!chatId) return false;
-
-  const sidebar = gpmQuerySelector ? gpmQuerySelector('sidebar') : document.querySelector(GPM_SELECTORS.sidebar);
-  if (!sidebar) return false; // Cannot verify without sidebar
-
-  const links = sidebar.querySelectorAll('a[href^="/app/"], a[href^="/chat/"], a[href^="/c/"]');
-
-  for (const link of links) {
-    const href = link.getAttribute('href') || '';
-    const extractedId = extractChatIdFromUrl(href);
-    if (extractedId === chatId) {
-      return true;
-    }
-  }
-
-  return false;
 }
 
 /**

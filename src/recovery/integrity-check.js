@@ -53,6 +53,17 @@ const GPMIntegrityCheck = (() => {
       });
     }
 
+    const orphanedChatMapEntries = findOrphanedChatMapEntries(projects, chatMap);
+    if (orphanedChatMapEntries.length > 0) {
+      issues.push({
+        type: 'orphaned_chatmap_entries',
+        severity: 'low',
+        count: orphanedChatMapEntries.length,
+        message: `${orphanedChatMapEntries.length} chatMap entry/entries not in any project.chatIds`,
+        items: orphanedChatMapEntries.slice(0, 10),
+      });
+    }
+
     const missingParents = findMissingParentRefs(projects);
     if (missingParents.length > 0) {
       issues.push({
@@ -104,6 +115,22 @@ const GPMIntegrityCheck = (() => {
         if (!chatMap[chatId]) {
           orphans.push({ projectId: project.id, projectName: project.name, chatId });
         }
+      }
+    }
+    return orphans;
+  }
+
+  function findOrphanedChatMapEntries(projects, chatMap) {
+    const allAssigned = new Set();
+    for (const project of projects) {
+      for (const chatId of project.chatIds || []) {
+        allAssigned.add(chatId);
+      }
+    }
+    const orphans = [];
+    for (const chatId of Object.keys(chatMap)) {
+      if (!allAssigned.has(chatId)) {
+        orphans.push({ chatId, projectId: chatMap[chatId].projectId });
       }
     }
     return orphans;
@@ -215,8 +242,31 @@ const GPMIntegrityCheck = (() => {
       circularIssue.fixed = true;
     }
 
+    const orphanedMapIssue = issues.find((i) => i.type === 'orphaned_chatmap_entries');
+    if (orphanedMapIssue) {
+      const allAssigned = new Set();
+      for (const project of projects) {
+        for (const chatId of project.chatIds || []) {
+          allAssigned.add(chatId);
+        }
+      }
+      const toRemove = Object.keys(chatMap).filter((chatId) => !allAssigned.has(chatId));
+      for (const chatId of toRemove) {
+        delete chatMap[chatId];
+      }
+      if (toRemove.length > 0) {
+        fixed.push({ type: 'orphaned_chatmap_entries', removed: toRemove.length });
+      }
+      orphanedMapIssue.fixed = true;
+    }
+
     if (fixed.length > 0) {
-      await GPMStorage.saveProjects(projects);
+      if (fixed.some((f) => f.type === 'orphaned_chatmap_entries')) {
+        const updates = { gpm_projects: projects, gpm_chatMap: chatMap };
+        await chrome.storage.local.set(updates);
+      } else {
+        await GPMStorage.saveProjects(projects);
+      }
       gpmLog('Auto-fixed', fixed.length, 'integrity issues');
     }
 
@@ -226,39 +276,37 @@ const GPMIntegrityCheck = (() => {
   async function attemptRecovery(issues) {
     gpmError('Critical data issues, attempting recovery from backup...');
 
-    const backups = await GPMBackupManager.getBackups();
+    const backup = await GPMStorage.getBackupInfo();
 
-    if (backups.length > 0) {
-      const latestBackup = backups[backups.length - 1];
+    if (backup) {
+      const restored = await GPMStorage.restoreFromBackup();
 
-      try {
-        const restored = await GPMBackupManager.restoreBackup(latestBackup.id);
-
-        if (restored) {
-          gpmLog('Data recovered from backup:', latestBackup.id);
-          return {
-            success: true,
-            recovered: true,
-            backupId: latestBackup.id,
-            backupDate: GPMBackupManager.formatBackupDate(latestBackup.timestamp),
-            issues,
-          };
-        }
-      } catch (e) {
-        gpmError('Recovery from backup failed:', e);
+      if (restored) {
+        gpmLog('Data recovered from backup (type:', backup.type, ')');
+        return {
+          success: true,
+          recovered: true,
+          backupType: backup.type,
+          backupDate: new Date(backup.timestamp).toISOString(),
+          issues,
+        };
       }
     }
 
-    gpmError('No valid backups available, creating emergency backup and resetting');
+    gpmError('No valid backup available, creating emergency backup and resetting');
 
     try {
       const currentData = await chrome.storage.local.get(null);
-      await chrome.storage.local.set({
-        gpm_emergency_backup_before_reset: {
-          data: currentData,
-          timestamp: Date.now(),
-        },
-      });
+      const bytesUsed = await chrome.storage.local.getBytesInUse(null);
+      if (bytesUsed <= 8 * 1024 * 1024) {
+        await chrome.storage.local.set({
+          gpm_backup_current: {
+            type: 'emergency',
+            data: currentData,
+            timestamp: Date.now(),
+          },
+        });
+      }
 
       await GPMStorage.clearAll();
 
@@ -279,10 +327,10 @@ const GPMIntegrityCheck = (() => {
       };
     }
   }
-
   return {
     run,
     findOrphanChatIds,
+    findOrphanedChatMapEntries,
     findMissingParentRefs,
     findCircularRefs,
     findDuplicateChatIds,

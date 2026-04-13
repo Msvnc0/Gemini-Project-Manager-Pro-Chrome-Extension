@@ -17,7 +17,8 @@ const GPM_SELECTORS = {
   // ── Sidebar container ──
   // Primary: custom element name (most stable)
   // Fallbacks: class-based, semantic HTML, ARIA roles
-  sidebar: 'conversations-list, [class*="sidenav"], [class*="overflow-container"], nav[aria-label], nav, [role="navigation"]',
+  sidebar:
+    'conversations-list, [class*="sidenav"], [class*="overflow-container"], nav[aria-label], nav, [role="navigation"]',
 
   // ── Individual chat items in the sidebar ──
   // Gemini uses /app/<id> format for chat URLs
@@ -25,7 +26,8 @@ const GPM_SELECTORS = {
 
   // ── The "New Chat" button ──
   // Try aria-label first (most reliable), then generic /app link
-  newChatButton: 'a[href="/app"][aria-label*="New chat"], a[href="/app"][aria-label*="Yeni sohbet"], a[href="/app"]:not([href*="/app/"])',
+  newChatButton:
+    'a[href="/app"][aria-label*="New chat"], a[href="/app"][aria-label*="Yeni sohbet"], a[href="/app"]:not([href*="/app/"])',
 
   // ── The text input / prompt area ──
   // contenteditable is most common, textarea and role="textbox" as fallbacks
@@ -37,14 +39,15 @@ const GPM_SELECTORS = {
 
   // ── Toolbar elements (for Quick Prompt button injection) ──
   // Multiple fallbacks: Gemini frequently renames these classes
-  leadingActions: '.leading-actions-wrapper, .input-area-leading-actions, [class*="leading-actions"], [class*="toolbar-actions"]',
+  leadingActions:
+    '.leading-actions-wrapper, .input-area-leading-actions, [class*="leading-actions"], [class*="toolbar-actions"]',
   toolboxDrawer: 'toolbox-drawer, [class*="toolbox-drawer"], [class*="tool-drawer"]',
   toolboxButtonContainer: '.toolbox-drawer-button-container, [class*="toolbox-button"]',
 
   // ── Sidebar sections ──
   chatHistory: '.chat-history',
   gemsList: '.gems-list-container',
-  sideNavEntry: '.side-nav-entry-container'
+  sideNavEntry: '.side-nav-entry-container',
 };
 
 // ── Selector Cache (adaptive discovery results) ──
@@ -73,7 +76,8 @@ const _gpmStructuralDiscovery = {
         const isScrollable = style.overflowY === 'auto' || style.overflowY === 'scroll';
         const isReasonableSize = el.clientHeight > 200;
         if (isScrollable && isReasonableSize) {
-          if (typeof gpmLog === 'function') gpmLog('Sidebar discovered via structural search (scrollable ancestor of chat link)');
+          if (typeof gpmLog === 'function')
+            gpmLog('Sidebar discovered via structural search (scrollable ancestor of chat link)');
           return el;
         }
         el = el.parentElement;
@@ -106,7 +110,7 @@ const _gpmStructuralDiscovery = {
       }
     }
     return null;
-  }
+  },
 };
 
 /**
@@ -153,26 +157,15 @@ function gpmQuerySelector(selectorKey, context) {
   }
 
   if (typeof gpmWarn === 'function') {
-    gpmWarn('Selector failed for key:', selectorKey, '| Tried:', selector.slice(0, 80),
-      discoveryFn ? '+ structural discovery' : '');
+    gpmWarn(
+      'Selector failed for key:',
+      selectorKey,
+      '| Tried:',
+      selector.slice(0, 80),
+      discoveryFn ? '+ structural discovery' : ''
+    );
   }
   return null;
-}
-
-/**
- * Try to find all elements using a selector with fallback chain.
- * @param {string} selectorKey — Key from GPM_SELECTORS
- * @param {Element} [context=document] — Optional parent element to search within
- * @returns {NodeList} — All matching elements
- */
-function gpmQuerySelectorAll(selectorKey, context) {
-  const selector = GPM_SELECTORS[selectorKey];
-  if (!selector) {
-    if (typeof gpmWarn === 'function') gpmWarn('Unknown selector key:', selectorKey);
-    return [];
-  }
-  const root = context || document;
-  return root.querySelectorAll(selector);
 }
 
 /**

@@ -120,17 +120,6 @@ const GPMSyncManager = (() => {
     }
   }
 
-  async function syncPull() {
-    const conflict = await checkForConflicts();
-
-    if (conflict.hasConflict) {
-      gpmLog('[GPM Sync] Conflict detected:', conflict);
-      return { success: false, conflict };
-    }
-
-    return { success: true, conflict: null };
-  }
-
   async function startAutoSync() {
     if (syncTimer) return;
 
@@ -174,11 +163,6 @@ const GPMSyncManager = (() => {
     });
   }
 
-  async function onDataChanged() {
-    await updateLocalMeta();
-    await syncPush();
-  }
-
   return {
     getDeviceId,
     getLocalMeta,
@@ -186,9 +170,7 @@ const GPMSyncManager = (() => {
     setSyncMeta,
     checkForConflicts,
     syncPush,
-    syncPull,
     startAutoSync,
     stopAutoSync,
-    onDataChanged,
   };
 })();

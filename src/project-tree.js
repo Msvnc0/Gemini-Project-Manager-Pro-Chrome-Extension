@@ -884,26 +884,6 @@ function gpmShowChatContextMenu(x, y, chatId, mapping, allProjects) {
     { icon: '📂', label: t('moveToProject'), submenu: moveSubmenu },
   ];
 
-  // Tags submenu (if tags manager is available)
-  if (typeof GPMTagsManager !== 'undefined') {
-    items.push({ divider: true });
-    items.push({
-      icon: '🏷️',
-      label: t('tags'),
-      submenu: [
-        { icon: '+', label: t('addTag'), action: () => {} },
-        ...GPMTagsManager.DEFAULT_TAGS.slice(0, 5).map((tag) => ({
-          icon: tag.icon,
-          label: tag.name,
-          action: async () => {
-            await GPMTagsManager.addTagToChat(chatId, tag.id);
-            gpmRenderTree();
-          },
-        })),
-      ],
-    });
-  }
-
   items.push({ divider: true });
   items.push({
     icon: '🗑️',
@@ -943,18 +923,6 @@ function gpmShowCreateProjectModal() {
   });
 }
 
-function gpmShowTemplateDialog() {
-  if (!GPM_STATE.modalRoot) return;
-  GPMUI.showTemplateDialog(GPM_STATE.modalRoot, async (templateId) => {
-    if (typeof applyTemplate !== 'undefined') {
-      await applyTemplate(templateId);
-      if (typeof GPMUsageTracker !== 'undefined') {
-        GPMUsageTracker.trackFeatureUsage('template_' + templateId);
-      }
-    }
-  });
-}
-
 async function gpmShowSettingsModal() {
   if (!GPM_STATE.modalRoot) return;
   const settings = await GPMStorage.getSettings();
@@ -974,7 +942,10 @@ async function gpmShowSettingsModal() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `gpm-backup-${Date.now()}.json`;
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, '0');
+      const ts = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+      a.download = `gpm-backup-${ts}.json`;
       a.click();
       URL.revokeObjectURL(url);
     },
@@ -1019,89 +990,4 @@ async function gpmShowSettingsModal() {
       }
     },
   });
-}
-
-// ══════════════════════════════════════
-//  BULK SELECTION OPERATIONS
-// ══════════════════════════════════════
-
-function gpmToggleBulkSelection(chatId, event) {
-  if (!GPM_STATE.bulkSelection.active) {
-    GPM_STATE.bulkSelection.active = true;
-  }
-  if (event && (event.ctrlKey || event.metaKey)) {
-    if (GPM_STATE.bulkSelection.selectedChatIds.has(chatId)) {
-      GPM_STATE.bulkSelection.selectedChatIds.delete(chatId);
-    } else {
-      if (GPM_STATE.bulkSelection.selectedChatIds.size >= 50) {
-        showToast(t('bulkLimitReached'));
-        return;
-      }
-      GPM_STATE.bulkSelection.selectedChatIds.add(chatId);
-    }
-  } else {
-    GPM_STATE.bulkSelection.selectedChatIds.clear();
-    GPM_STATE.bulkSelection.selectedChatIds.add(chatId);
-  }
-  gpmRenderTree();
-  gpmUpdateBulkToolbar();
-}
-
-function gpmClearBulkSelection() {
-  GPM_STATE.bulkSelection.active = false;
-  GPM_STATE.bulkSelection.selectedChatIds.clear();
-  gpmRenderTree();
-  gpmUpdateBulkToolbar();
-}
-
-function gpmUpdateBulkToolbar() {
-  const existing = document.querySelector('.gpm-bulk-toolbar');
-  if (existing) existing.remove();
-
-  if (!GPM_STATE.bulkSelection.active || GPM_STATE.bulkSelection.selectedChatIds.size === 0) return;
-
-  const count = GPM_STATE.bulkSelection.selectedChatIds.size;
-  const toolbar = document.createElement('div');
-  toolbar.className = 'gpm-bulk-toolbar';
-  toolbar.innerHTML = `
-    <span class="gpm-bulk-count">${count} ${t('selected')}</span>
-    <button class="gpm-btn gpm-btn-sm" data-action="move">${t('moveSelected')}</button>
-    <button class="gpm-btn gpm-btn-sm" data-action="tag">${t('tagSelected')}</button>
-    <button class="gpm-btn gpm-btn-sm gpm-btn-danger" data-action="delete">${t('delete')}</button>
-    <button class="gpm-btn gpm-btn-sm gpm-btn-secondary" data-action="cancel">${t('cancel')}</button>
-  `;
-  toolbar.addEventListener('click', async (e) => {
-    const action = e.target.dataset.action;
-    if (!action) return;
-    switch (action) {
-      case 'move':
-        break;
-      case 'tag':
-        break;
-      case 'delete':
-        const chatIds = Array.from(GPM_STATE.bulkSelection.selectedChatIds);
-        for (const id of chatIds) await GPMStorage.unassignChat(id);
-        showToast(t('removedChats').replace('{count}', chatIds.length));
-        gpmClearBulkSelection();
-        break;
-      case 'cancel':
-        gpmClearBulkSelection();
-        break;
-    }
-  });
-  if (GPM_STATE.container) GPM_STATE.container.appendChild(toolbar);
-}
-
-async function gpmBulkMoveToProject(targetProjectId) {
-  const chatIds = Array.from(GPM_STATE.bulkSelection.selectedChatIds);
-  for (const chatId of chatIds) await GPMStorage.assignChat(chatId, targetProjectId);
-  showToast(t('movedChats').replace('{count}', chatIds.length));
-  gpmClearBulkSelection();
-}
-
-async function gpmBulkAssignTags(tagIds) {
-  const chatIds = Array.from(GPM_STATE.bulkSelection.selectedChatIds);
-  await TagManager.bulkAssignTags(chatIds, tagIds);
-  showToast(t('taggedChats').replace('{count}', chatIds.length));
-  gpmClearBulkSelection();
 }

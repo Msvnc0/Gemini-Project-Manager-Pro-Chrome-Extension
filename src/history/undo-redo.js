@@ -6,7 +6,7 @@
  */
 
 const GPMHistory = (() => {
-  const MAX_HISTORY = 20;
+  const MAX_HISTORY = 50;
   const undoStack = [];
   const redoStack = [];
 
@@ -66,22 +66,6 @@ const GPMHistory = (() => {
     return redoStack.length > 0;
   }
 
-  function clear() {
-    undoStack.length = 0;
-    redoStack.length = 0;
-  }
-
-  function getHistoryInfo() {
-    return {
-      undoCount: undoStack.length,
-      redoCount: redoStack.length,
-      canUndo: canUndo(),
-      canRedo: canRedo(),
-      nextUndo: undoStack[undoStack.length - 1]?.type || null,
-      nextRedo: redoStack[redoStack.length - 1]?.type || null,
-    };
-  }
-
   function createAction(type, data) {
     switch (type) {
       case 'move_chat':
@@ -134,6 +118,12 @@ const GPMHistory = (() => {
           redo: async () => {
             const projects = await GPMStorage.getProjects();
             projects.push(data.projectData);
+            if (data.projectData.parentId) {
+              const parent = projects.find((p) => p.id === data.projectData.parentId);
+              if (parent && !parent.children.includes(data.projectData.id)) {
+                parent.children.push(data.projectData.id);
+              }
+            }
             await GPMStorage.saveProjects(projects);
             gpmRenderTree();
           },
@@ -171,6 +161,26 @@ const GPMHistory = (() => {
           },
         };
 
+      case 'bulk_move':
+        return {
+          type,
+          chatIds: data.chatIds,
+          fromProjectIds: data.fromProjectIds,
+          toProjectId: data.toProjectId,
+          undo: async () => {
+            for (const chatId of data.chatIds) {
+              await GPMStorage.assignChat(chatId, data.fromProjectIds[chatId]);
+            }
+            gpmRenderTree();
+          },
+          redo: async () => {
+            for (const chatId of data.chatIds) {
+              await GPMStorage.assignChat(chatId, data.toProjectId);
+            }
+            gpmRenderTree();
+          },
+        };
+
       default:
         return null;
     }
@@ -182,8 +192,6 @@ const GPMHistory = (() => {
     redo,
     canUndo,
     canRedo,
-    clear,
-    getHistoryInfo,
     createAction,
   };
 })();
