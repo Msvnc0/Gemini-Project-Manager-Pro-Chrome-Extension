@@ -82,9 +82,7 @@ function gpmTriggerNewChat() {
     ];
     const textLower = text;
     const ariaLower = ariaLabel;
-    if (
-      newChatLabels.some((label) => textLower.includes(label) || ariaLower.includes(label))
-    ) {
+    if (newChatLabels.some((label) => textLower.includes(label) || ariaLower.includes(label))) {
       gpmLog('Clicking "New chat" link');
       el.click();
       clicked = true;
