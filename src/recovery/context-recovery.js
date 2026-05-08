@@ -139,8 +139,17 @@ const GPMContextRecovery = (() => {
     return !isInvalidated && checkContext();
   }
 
+  function stopMonitoring() {
+    if (checkInterval) {
+      clearInterval(checkInterval);
+      checkInterval = null;
+    }
+    gpmLog('Context recovery monitoring stopped');
+  }
+
   return {
     startMonitoring,
+    stopMonitoring,
     isContextValid,
     showRecoveryUI,
   };

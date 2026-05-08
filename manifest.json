@@ -10,7 +10,6 @@
       "matches": ["https://gemini.google.com/*"],
       "js": [
         "src/i18n.js",
-        "src/utils/uid.js",
         "src/utils/validators.js",
         "src/storage.js",
         "src/selectors.js",

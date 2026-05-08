@@ -113,6 +113,10 @@ let _spaObserver = null;
 let _spaCheckFn = null;
 let _sidebarObserver = null;
 let _newChatsObserver = null;
+let _newChatsPollInterval = null;
+let _visibilityHandler = null;
+let _pollLastChatId = null;
+let _pollLastUrl = null;
 
 function gpmObserveSPANavigation() {
   if (_spaObserver) return;
@@ -168,6 +172,13 @@ function gpmCleanupObservers() {
     history.replaceState = GPM_STATE._origReplaceState;
     delete GPM_STATE._origReplaceState;
   }
+  gpmStopPolling();
+  if (_visibilityHandler) {
+    document.removeEventListener('visibilitychange', _visibilityHandler);
+    _visibilityHandler = null;
+  }
+  _pollLastChatId = null;
+  _pollLastUrl = null;
 }
 
 function gpmOnNavigate() {
@@ -510,84 +521,80 @@ async function gpmCleanupAfterImport(maxRetries = 5, retryDelay = 3000) {
 //  NEW CHAT OBSERVER (Unified Polling)
 // ══════════════════════════════════════
 
-function gpmObserveNewChats() {
-  let lastChatId = gpmGetCurrentChatId();
-  let lastUrl = location.href;
-  let pollIntervalId = null;
+function gpmPollCheck() {
+  if (!gpmIsContextValid()) {
+    gpmStopPolling();
+    return;
+  }
 
-  // ── Unified polling function (replaces 3 separate setIntervals) ──
-  function gpmPollCheck() {
-    if (!gpmIsContextValid()) {
-      gpmStopPolling();
-      return;
-    }
+  const currentUrl = location.href;
+  const id = gpmGetCurrentChatId();
 
-    const currentUrl = location.href;
-    const id = gpmGetCurrentChatId();
+  if (currentUrl !== _pollLastUrl) {
+    _pollLastUrl = currentUrl;
+    gpmLog('URL changed to:', currentUrl, 'chatId:', id);
+  }
 
-    // Detect URL change
-    if (currentUrl !== lastUrl) {
-      lastUrl = currentUrl;
-      gpmLog('URL changed to:', currentUrl, 'chatId:', id);
-    }
+  if (id && id !== _pollLastChatId) {
+    gpmLog('Chat ID changed:', _pollLastChatId, '->', id);
+    _pollLastChatId = id;
 
-    if (id && id !== lastChatId) {
-      gpmLog('Chat ID changed:', lastChatId, '->', id);
-      lastChatId = id;
-
-      if (GPM_STATE.pendingChatAssignment) {
-        const { projectId } = GPM_STATE.pendingChatAssignment;
-        GPM_STATE.pendingChatAssignment = null;
-        gpmLog('Auto-assigning chat', id, 'to project:', projectId);
-        GPMStorage.assignChat(id, projectId).then(() => {
-          gpmLog('Chat assigned successfully');
-          gpmRenderTree();
-          // Retry alias resolution after delays to catch Gemini title update
-          setTimeout(() => {
-            if (gpmIsContextValid()) gpmScheduleAliasResolve();
-          }, 2000);
-          setTimeout(() => {
-            if (gpmIsContextValid()) gpmScheduleAliasResolve();
-          }, 5000);
-          setTimeout(() => {
-            if (gpmIsContextValid()) gpmScheduleAliasResolve();
-          }, 10000);
-        });
-      } else {
-        // Re-render to update active chat highlight
+    if (GPM_STATE.pendingChatAssignment) {
+      const { projectId } = GPM_STATE.pendingChatAssignment;
+      GPM_STATE.pendingChatAssignment = null;
+      gpmLog('Auto-assigning chat', id, 'to project:', projectId);
+      GPMStorage.assignChat(id, projectId).then(() => {
+        gpmLog('Chat assigned successfully');
         gpmRenderTree();
-      }
-    }
-
-    // Also detect when we navigate AWAY from a chat (to home/app page)
-    if (!id && lastChatId) {
-      lastChatId = null;
-      gpmLog('Navigated to home page (new chat pending:', !!GPM_STATE.pendingChatAssignment, ')');
-    }
-
-    // Pending assignment timeout check (was a separate 5s setInterval)
-    if (GPM_STATE.pendingChatAssignment && GPM_STATE.pendingChatAssignment._ts) {
-      if (Date.now() - GPM_STATE.pendingChatAssignment._ts > GPM_CONFIG.ASSIGNMENT_TIMEOUT) {
-        gpmWarn('Pending assignment timed out');
-        GPM_STATE.pendingChatAssignment = null;
-      }
+        setTimeout(() => {
+          if (gpmIsContextValid()) gpmScheduleAliasResolve();
+        }, 2000);
+        setTimeout(() => {
+          if (gpmIsContextValid()) gpmScheduleAliasResolve();
+        }, 5000);
+        setTimeout(() => {
+          if (gpmIsContextValid()) gpmScheduleAliasResolve();
+        }, 10000);
+      });
+    } else {
+      gpmRenderTree();
     }
   }
 
-  function gpmStartPolling() {
-    if (pollIntervalId) return;
-    pollIntervalId = setInterval(gpmPollCheck, GPM_CONFIG.POLL_INTERVAL);
+  if (!id && _pollLastChatId) {
+    _pollLastChatId = null;
+    gpmLog('Navigated to home page (new chat pending:', !!GPM_STATE.pendingChatAssignment, ')');
   }
 
-  function gpmStopPolling() {
-    if (pollIntervalId) {
-      clearInterval(pollIntervalId);
-      pollIntervalId = null;
+  if (GPM_STATE.pendingChatAssignment && GPM_STATE.pendingChatAssignment._ts) {
+    if (Date.now() - GPM_STATE.pendingChatAssignment._ts > GPM_CONFIG.ASSIGNMENT_TIMEOUT) {
+      gpmWarn('Pending assignment timed out');
+      GPM_STATE.pendingChatAssignment = null;
     }
   }
+}
 
-  // ── Visibility-based polling control — stop in background tabs ──
-  document.addEventListener('visibilitychange', () => {
+function gpmStartPolling() {
+  if (_newChatsPollInterval) return;
+  _newChatsPollInterval = setInterval(gpmPollCheck, GPM_CONFIG.POLL_INTERVAL);
+}
+
+function gpmStopPolling() {
+  if (_newChatsPollInterval) {
+    clearInterval(_newChatsPollInterval);
+    _newChatsPollInterval = null;
+  }
+}
+
+function gpmObserveNewChats() {
+  _pollLastChatId = gpmGetCurrentChatId();
+  _pollLastUrl = location.href;
+
+  if (_visibilityHandler) {
+    document.removeEventListener('visibilitychange', _visibilityHandler);
+  }
+
+  _visibilityHandler = () => {
     if (document.visibilityState === 'visible') {
       gpmStartPolling();
       GPM_STATE._sidebarStabilized = false;
@@ -598,16 +605,14 @@ function gpmObserveNewChats() {
     } else {
       gpmStopPolling();
     }
-  });
+  };
+  document.addEventListener('visibilitychange', _visibilityHandler);
 
-  // Start polling only if tab is visible
   if (document.visibilityState === 'visible') {
     gpmStartPolling();
     _gpmWaitForSidebarStabilize();
   }
 
-  // Enhance native chat items for drag & drop + detect deleted chats
-  // Optimized: observe only chat list changes, filter out GPM's own mutations (PERF-004)
   const sidebar = document.querySelector(GPM_SELECTORS.sidebar);
   if (sidebar) {
     let enhanceTimeout = null;

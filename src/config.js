@@ -123,6 +123,12 @@ function gpmResetState() {
   if (typeof gpmResetObserversFlag === 'function') {
     gpmResetObserversFlag();
   }
+  if (typeof GPMContextRecovery !== 'undefined' && GPMContextRecovery.stopMonitoring) {
+    GPMContextRecovery.stopMonitoring();
+  }
+  if (typeof GPMKeyboardShortcuts !== 'undefined' && GPMKeyboardShortcuts.destroy) {
+    GPMKeyboardShortcuts.destroy();
+  }
 }
 
 // ── Extension context check ──
@@ -208,4 +214,11 @@ function gpmWaitForElement(selector, timeout = 10000) {
       resolve(null);
     }, timeout);
   });
+}
+
+function generateUid() {
+  const timestamp = Date.now().toString(36);
+  const random1 = crypto.getRandomValues(new Uint32Array(1))[0].toString(36);
+  const random2 = crypto.getRandomValues(new Uint32Array(1))[0].toString(36);
+  return `${timestamp}-${random1}-${random2}`;
 }

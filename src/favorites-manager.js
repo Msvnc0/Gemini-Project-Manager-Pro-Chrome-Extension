@@ -9,12 +9,18 @@ const GPMFavoritesManager = (() => {
   const FAVORITES_KEY = 'gpm_favorites';
 
   async function getFavorites() {
-    const { [FAVORITES_KEY]: favorites } = await chrome.storage.local.get(FAVORITES_KEY);
-    return favorites || [];
+    try {
+      const result = await chrome.storage.local.get(FAVORITES_KEY);
+      return result[FAVORITES_KEY] || [];
+    } catch (e) {
+      return [];
+    }
   }
 
   async function saveFavorites(favorites) {
-    await chrome.storage.local.set({ [FAVORITES_KEY]: favorites });
+    try {
+      await chrome.storage.local.set({ [FAVORITES_KEY]: favorites });
+    } catch (_) {}
   }
 
   async function toggleFavorite(projectId) {

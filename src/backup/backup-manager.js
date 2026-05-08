@@ -27,12 +27,6 @@ const GPMBackupManager = (() => {
     UPDATE: 'update',
   };
 
-  function uid() {
-    const timestamp = Date.now().toString(36);
-    const random1 = crypto.getRandomValues(new Uint32Array(1))[0].toString(36);
-    return `${timestamp}-${random1}`;
-  }
-
   async function createBackup(trigger = 'manual', description = '') {
     try {
       const [projects, chatMap, prompts, settings] = await Promise.all([
@@ -50,7 +44,7 @@ const GPMBackupManager = (() => {
       };
 
       const backup = {
-        id: uid(),
+        id: generateUid(),
         timestamp: Date.now(),
         trigger,
         description,

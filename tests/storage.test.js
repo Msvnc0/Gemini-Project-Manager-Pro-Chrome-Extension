@@ -18,6 +18,14 @@ const validatorsCode = readFileSync(resolve('src/utils/validators.js'), 'utf-8')
 const patchedValidators = validatorsCode.replace(/^const GPMValidators\s*=/m, 'globalThis.GPMValidators =');
 new Function(patchedValidators)();
 
+// Provide generateUid global (defined in config.js, used by storage.js)
+globalThis.generateUid = function () {
+  const timestamp = Date.now().toString(36);
+  const random1 = crypto.getRandomValues(new Uint32Array(1))[0].toString(36);
+  const random2 = crypto.getRandomValues(new Uint32Array(1))[0].toString(36);
+  return `${timestamp}-${random1}-${random2}`;
+};
+
 // Load and execute storage.js
 const storageCode = readFileSync(resolve('src/storage.js'), 'utf-8');
 const patchedCode = storageCode.replace(/^const GPMStorage\s*=/m, 'globalThis.GPMStorage =');
@@ -45,14 +53,18 @@ describe('Schema Migration v5', () => {
   it('should add starredAt and remove tags from chatMap entries', async () => {
     setMockStorage({
       gpm_schemaVersion: 2,
-      gpm_chatMap: { 'chat-1': { projectId: 'p1', alias: '', pinned: false } },
+      gpm_chatMap: {
+        chat1: { projectId: 'p1', alias: '', pinned: false, tags: ['tag1'] },
+      },
+      gpm_tags: { tag1: 'Tag 1' },
     });
 
     await GPMStorage.initializeStorage();
 
-    const chatMap = await GPMStorage.getChatMap();
-    expect(chatMap['chat-1'].starredAt).toBeNull();
-    expect(chatMap['chat-1'].tags).toBeUndefined();
+    const storage = getMockStorage();
+    expect(storage.gpm_chatMap['chat1'].starredAt).toBeNull();
+    expect(storage.gpm_chatMap['chat1'].tags).toBeUndefined();
+    expect(storage.gpm_tags).toBeUndefined();
   });
 
   it('should remove legacy backup keys on v5 migration', async () => {

@@ -522,13 +522,12 @@ function gpmSidebarHasContent(sidebar) {
   if (sidebar.querySelector('a[href*="/chat/"], a[href*="/c/"]')) return true;
   // Check for "Chats" text in all 10 supported languages
   const chatLabels = [
-    'Chats',
-    'Sohbetler', // en, tr
-    'Chats', // fr, pt (same as en)
+    'Chats', // en, fr, pt
+    'Sohbetler', // tr
     'Chat', // de, it
     'Чаты', // ru
     'チャット', // ja
-    '聊天', // zh_CN
+    '聊天', // zh
     'Conversaciones', // es
     'चैट्स', // hi
     '대화', // ko
@@ -564,6 +563,7 @@ function gpmSidebarHasContent(sidebar) {
 }
 
 let _sidebarPresenceObserver = null;
+let _reinitInProgress = false;
 
 function gpmObserveForSidebar() {
   if (_sidebarPresenceObserver) return;
@@ -632,6 +632,8 @@ function gpmStartHealthMonitor() {
       } else {
         // Sidebar itself is gone → might be navigating, wait for it
         gpmLog('Health check: Sidebar not found, waiting for re-appearance');
+        gpmStopHealthMonitor();
+        if (typeof gpmCleanupObservers === 'function') gpmCleanupObservers();
         GPM_STATE.initialized = false;
         gpmObserveForSidebar();
       }
@@ -675,7 +677,6 @@ function gpmStopHealthMonitor() {
  * @param {string} reason — Why re-init was triggered (for logging)
  */
 function gpmScheduleReinit(reason) {
-  // Check failure count — back off if too many consecutive failures
   if (GPM_STATE.reinitFailCount >= GPM_CONFIG.MAX_REINIT_FAILURES) {
     gpmWarn(
       'Re-init backed off after',
@@ -687,8 +688,7 @@ function gpmScheduleReinit(reason) {
     return;
   }
 
-  // Debounce: don't re-init if one is already scheduled
-  if (GPM_STATE.reinitDebounceTimer) return;
+  if (GPM_STATE.reinitDebounceTimer || _reinitInProgress) return;
 
   gpmLog('Scheduling re-initialization:', reason);
   GPM_STATE.reinitDebounceTimer = setTimeout(() => {
@@ -697,12 +697,13 @@ function gpmScheduleReinit(reason) {
     if (!gpmIsContextValid()) return;
 
     gpmLog('Executing re-initialization (attempt', GPM_STATE.reinitFailCount + 1, ')');
+    _reinitInProgress = true;
     GPM_STATE.reinitFailCount++;
 
-    // Clean up stale state
     gpmResetState();
 
-    // Re-run initialization
-    gpmInit();
+    gpmInit().finally(() => {
+      _reinitInProgress = false;
+    });
   }, GPM_CONFIG.REINIT_DEBOUNCE);
 }

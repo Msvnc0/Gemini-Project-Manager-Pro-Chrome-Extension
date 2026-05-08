@@ -70,6 +70,12 @@ function gpmHighlightText(text, query) {
   return frag;
 }
 
+function _gpmCountAllChats(proj, allProjs) {
+  const own = (proj.chatIds || []).length;
+  const kids = allProjs.filter((p) => p.parentId === proj.id);
+  return own + kids.reduce((sum, kid) => sum + _gpmCountAllChats(kid, allProjs), 0);
+}
+
 // ══════════════════════════════════════
 //  RENDER PROJECT TREE (Direct DOM)
 // ══════════════════════════════════════
@@ -366,7 +372,7 @@ function gpmCreateProjectRow(project, allProjects, chatMap) {
 
   const count = document.createElement('span');
   count.setAttribute('data-gpm', 'item-count');
-  const total = chatIds.length + children.reduce((s, c) => s + (c.chatIds?.length || 0), 0);
+  const total = _gpmCountAllChats(project, allProjects);
   count.textContent = total > 0 ? total : '';
 
   row.append(icon, label, count);
@@ -809,10 +815,31 @@ function gpmShowProjectContextMenu(x, y, project, allProjects) {
             danger: true,
             onConfirm: async () => {
               if (typeof GPMHistory !== 'undefined') {
+                const allProjs = await GPMStorage.getProjects();
+                const allChatMap = await GPMStorage.getChatMap();
+                function collectDescendantIds(pid) {
+                  const node = allProjs.find((p) => p.id === pid);
+                  if (!node) return [pid];
+                  let ids = [pid];
+                  for (const childId of node.children || []) {
+                    ids = ids.concat(collectDescendantIds(childId));
+                  }
+                  return ids;
+                }
+                const descendantIds = new Set(collectDescendantIds(project.id));
+                const capturedProjects = allProjs.filter((p) => descendantIds.has(p.id));
+                const capturedChatMap = {};
+                for (const cid of Object.keys(allChatMap)) {
+                  if (descendantIds.has(allChatMap[cid].projectId)) {
+                    capturedChatMap[cid] = allChatMap[cid];
+                  }
+                }
+
                 const action = GPMHistory.createAction('delete_project', {
                   projectId: project.id,
                   projectData: project,
-                  chatMapData: {},
+                  chatMapData: capturedChatMap,
+                  capturedProjects: capturedProjects,
                 });
                 GPMHistory.push(action);
               }

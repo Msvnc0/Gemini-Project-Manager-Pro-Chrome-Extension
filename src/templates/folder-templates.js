@@ -135,10 +135,17 @@ async function applyTemplate(templateId) {
     return false;
   }
 
+  const settings = await GPMStorage.getSettings();
+  const useEnglish = settings.lang !== 'tr';
+
+  function getLocalizedName(item) {
+    return useEnglish && item.nameEn ? item.nameEn : item.name;
+  }
+
   async function createStructure(items, parentId = null) {
     for (const item of items) {
       const project = await GPMStorage.createProject({
-        name: item.name,
+        name: getLocalizedName(item),
         icon: item.icon || '📁',
         color: '#8ab4f8',
         parentId,
@@ -159,8 +166,7 @@ async function applyTemplate(templateId) {
 function getTemplateList() {
   return Object.entries(GPM_FOLDER_TEMPLATES).map(([id, template]) => ({
     id,
-    name: template.name,
-    nameEn: template.nameEn,
+    name: template.nameEn || template.name,
     icon: template.icon,
     description: template.description,
   }));

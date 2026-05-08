@@ -83,6 +83,7 @@ export default [
         applyTemplate: 'readonly',
         getTemplateList: 'readonly',
         getLanguageOptions: 'readonly',
+        generateUid: 'readonly',
       },
     },
     rules: {

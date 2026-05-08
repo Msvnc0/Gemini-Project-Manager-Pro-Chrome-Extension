@@ -81,23 +81,6 @@ const GPM_MIGRATIONS = [
     fromVersion: 4,
     toVersion: 5,
     migrate: (data) => {
-      const legacyKeys = [
-        'gpm_projects_backup',
-        'gpm_backup_ts',
-        'gpm_chatMap_backup',
-        'gpm_pre_import_projects',
-        'gpm_pre_import_chatMap',
-        'gpm_pre_import_quickPrompts',
-        'gpm_pre_import_ts',
-        'gpm_pre_migration_backup',
-        'gpm_update_backup',
-        'gpm_emergency_backup_before_reset',
-        'gpm_projects_pre_restore',
-        'gpm_backups',
-      ];
-      for (const key of legacyKeys) {
-        if (data[key] !== undefined) delete data[key];
-      }
       return data;
     },
   },
@@ -172,6 +155,27 @@ async function gpmRunMigrations(currentVersion) {
     gpm_settings: data.gpm_settings,
     gpm_schemaVersion: CURRENT_SCHEMA_VERSION,
   });
+
+  const legacyKeys = [
+    'gpm_projects_backup',
+    'gpm_backup_ts',
+    'gpm_chatMap_backup',
+    'gpm_pre_import_projects',
+    'gpm_pre_import_chatMap',
+    'gpm_pre_import_quickPrompts',
+    'gpm_pre_import_ts',
+    'gpm_pre_migration_backup',
+    'gpm_update_backup',
+    'gpm_emergency_backup_before_reset',
+    'gpm_projects_pre_restore',
+    'gpm_backups',
+  ];
+  const keysToRemove = legacyKeys.filter((k) => allData[k] !== undefined);
+  if (keysToRemove.length > 0) {
+    await chrome.storage.local.remove(keysToRemove);
+    console.log('[GPM] Cleaned up', keysToRemove.length, 'legacy key(s)');
+  }
+
   console.log('[GPM] Migration complete — now at schema v' + CURRENT_SCHEMA_VERSION);
 }
 
@@ -297,5 +301,5 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse({ ok: true });
     return;
   }
-  return true;
+  return false;
 });

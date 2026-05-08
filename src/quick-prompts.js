@@ -30,10 +30,19 @@ function _gpmCreateQPButton() {
   btn.textContent = '⚡';
   btn.title = t('quickPrompts');
   btn.type = 'button';
-  btn.style.cssText = 'background:none;border:none;font-size:18px;cursor:pointer;padding:4px 8px;border-radius:50%;color:inherit;opacity:0.6;transition:opacity 150ms;display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;flex-shrink:0;vertical-align:middle;';
-  btn.addEventListener('mouseenter', () => { btn.style.opacity = '1'; });
-  btn.addEventListener('mouseleave', () => { btn.style.opacity = '0.6'; });
-  btn.addEventListener('click', (e) => { e.stopPropagation(); e.preventDefault(); gpmToggleQuickPrompts(); });
+  btn.style.cssText =
+    'background:none;border:none;font-size:18px;cursor:pointer;padding:4px 8px;border-radius:50%;color:inherit;opacity:0.6;transition:opacity 150ms;display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;flex-shrink:0;vertical-align:middle;';
+  btn.addEventListener('mouseenter', () => {
+    btn.style.opacity = '1';
+  });
+  btn.addEventListener('mouseleave', () => {
+    btn.style.opacity = '0.6';
+  });
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    gpmToggleQuickPrompts();
+  });
   return btn;
 }
 
@@ -88,16 +97,30 @@ function _gpmFindToolbarSlot() {
       if (!parent || parent === document.body) break;
       // A good container has multiple children (toolbar items) and is a flex/grid row
       if (parent.children.length >= 2) {
-        console.log('[GPM-DIAG] Strategy 2b: found toolbar row:', parent.tagName, parent.className?.slice(0, 80), 'children:', parent.children.length);
-        return { container: parent, insertRef: toolsContainer.nextSibling, method: 'content-search (next to Tools button)' };
+        gpmLog(
+          'Strategy 2b: found toolbar row:',
+          parent.tagName,
+          parent.className?.slice(0, 80),
+          'children:',
+          parent.children.length
+        );
+        return {
+          container: parent,
+          insertRef: toolsContainer.nextSibling,
+          method: 'content-search (next to Tools button)',
+        };
       }
       toolsContainer = parent;
     }
     // Fallback: just use direct parent
     const toolsParent = toolsButton.parentElement;
     if (toolsParent) {
-      console.log('[GPM-DIAG] Strategy 2b fallback: using direct parent:', toolsParent.tagName, toolsParent.className?.slice(0, 80));
-      return { container: toolsParent, insertRef: toolsButton.nextSibling, method: 'content-search (Tools direct parent)' };
+      gpmLog('Strategy 2b fallback: using direct parent:', toolsParent.tagName, toolsParent.className?.slice(0, 80));
+      return {
+        container: toolsParent,
+        insertRef: toolsButton.nextSibling,
+        method: 'content-search (Tools direct parent)',
+      };
     }
   }
 
@@ -135,11 +158,16 @@ function _gpmFindToolbarSlot() {
   }
 
   // ── Diagnostic: log what was found for each strategy to help debug ──
-  console.log('[GPM-DIAG] _gpmFindToolbarSlot: all strategies failed.',
-    'leadingActions:', !!leadingActions,
-    'toolboxEl:', !!toolboxEl,
-    'toolsButton:', !!toolsButton,
-    'inputArea:', !!inputArea
+  gpmLog(
+    '_gpmFindToolbarSlot: all strategies failed.',
+    'leadingActions:',
+    !!leadingActions,
+    'toolboxEl:',
+    !!toolboxEl,
+    'toolsButton:',
+    !!toolsButton,
+    'inputArea:',
+    !!inputArea
   );
 
   // No toolbar found — do NOT return a low-confidence fallback
@@ -159,7 +187,7 @@ const _GPM_TOOLS_LABELS = [
   // Turkish
   'Araçlar',
   // German
-  'Tools', 'Werkzeuge',
+  'Werkzeuge',
   // French
   'Outils',
   // Spanish
@@ -179,7 +207,8 @@ const _GPM_TOOLS_LABELS = [
   // Hindi
   'टूल',
   // Arabic
-  'الأدوات', 'أدوات',
+  'الأدوات',
+  'أدوات',
   // Vietnamese
   'Công cụ',
   // Indonesian
@@ -187,7 +216,8 @@ const _GPM_TOOLS_LABELS = [
   // Thai
   'เครื่องมือ',
   // Bengali
-  'টুলস', 'সরঞ্জাম'
+  'টুলস',
+  'সরঞ্জাম',
 ];
 
 /**
@@ -200,20 +230,27 @@ function _gpmFindToolsButton() {
   const candidates = document.querySelectorAll('button, [role="button"]');
   for (const el of candidates) {
     const text = el.textContent?.trim();
-    if (text && _GPM_TOOLS_LABELS.some(label => text === label || text.startsWith(label))) {
+    if (text && _GPM_TOOLS_LABELS.some((label) => text === label || text.startsWith(label))) {
       return el;
     }
   }
-  // Also check span/div elements that may wrap the "Tools" label
-  const spans = document.querySelectorAll('span, div');
-  for (const el of spans) {
-    if (el.children.length > 2) continue; // Skip large containers
-    const text = el.textContent?.trim();
-    if (text && _GPM_TOOLS_LABELS.includes(text)) {
-      // Walk up to find the clickable parent
-      const clickable = el.closest('button, [role="button"]');
-      if (clickable) return clickable;
-      return el;
+  // Also check elements near the input area for "Tools" label
+  const inputArea = document.querySelector(GPM_SELECTORS.inputArea);
+  if (inputArea) {
+    const container =
+      inputArea.closest('form') || inputArea.closest('[role="region"]') || inputArea.parentElement?.parentElement;
+    if (container) {
+      const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null);
+      let textNode;
+      while ((textNode = walker.nextNode())) {
+        const text = textNode.textContent?.trim();
+        if (text && _GPM_TOOLS_LABELS.includes(text)) {
+          const el = textNode.parentElement;
+          const clickable = el?.closest('button, [role="button"]');
+          if (clickable) return clickable;
+          if (el && el.children.length <= 2) return el;
+        }
+      }
     }
   }
   return null;
@@ -228,7 +265,7 @@ function _gpmFindToolsButton() {
 function _gpmNodeContainsToolsLabel(node) {
   if (!node || !node.textContent) return false;
   const text = node.textContent.trim();
-  return _GPM_TOOLS_LABELS.some(label => text.includes(label));
+  return _GPM_TOOLS_LABELS.some((label) => text.includes(label));
 }
 
 /**
@@ -261,8 +298,16 @@ function _gpmInjectFloatingQPButton() {
   btn.style.boxShadow = '0 4px 12px rgba(0,0,0,0.4)';
   btn.style.pointerEvents = 'auto';
   btn.style.flexShrink = '0';
-  btn.addEventListener('mouseenter', () => { btn.style.opacity = '1'; btn.style.transform = 'scale(1.12)'; btn.style.boxShadow = '0 6px 16px rgba(0,0,0,0.5)'; });
-  btn.addEventListener('mouseleave', () => { btn.style.opacity = '0.92'; btn.style.transform = 'scale(1)'; btn.style.boxShadow = '0 4px 12px rgba(0,0,0,0.4)'; });
+  btn.addEventListener('mouseenter', () => {
+    btn.style.opacity = '1';
+    btn.style.transform = 'scale(1.12)';
+    btn.style.boxShadow = '0 6px 16px rgba(0,0,0,0.5)';
+  });
+  btn.addEventListener('mouseleave', () => {
+    btn.style.opacity = '0.92';
+    btn.style.transform = 'scale(1)';
+    btn.style.boxShadow = '0 4px 12px rgba(0,0,0,0.4)';
+  });
 
   document.body.appendChild(btn);
   gpmLog('⚡ button injected as floating fallback');
@@ -286,12 +331,12 @@ function gpmInjectQuickPromptTrigger() {
   }
 
   const slot = _gpmFindToolbarSlot();
-  console.log('[GPM-DIAG] _gpmFindToolbarSlot result:', slot ? slot.method : 'null (no toolbar found)');
+  gpmLog('_gpmFindToolbarSlot result:', slot ? slot.method : 'null (no toolbar found)');
 
   if (slot) {
     // If a floating button exists, remove it — we'll place it in the toolbar
     if (existingBtn) {
-      console.log('[GPM-DIAG] Relocating floating button into toolbar');
+      gpmLog('Relocating floating button into toolbar');
       existingBtn.remove();
     }
 
@@ -302,7 +347,13 @@ function gpmInjectQuickPromptTrigger() {
       } else {
         slot.container.appendChild(btn);
       }
-      console.log('[GPM-DIAG] ⚡ button placed via:', slot.method, '| container:', slot.container.tagName, slot.container.className?.slice(0, 80));
+      gpmLog(
+        '⚡ button placed via:',
+        slot.method,
+        '| container:',
+        slot.container.tagName,
+        slot.container.className?.slice(0, 80)
+      );
       gpmLog('⚡ button placed via:', slot.method);
 
       // ── Post-injection visibility check ──
@@ -314,7 +365,7 @@ function gpmInjectQuickPromptTrigger() {
       });
       return;
     } catch (e) {
-      console.error('[GPM-DIAG] ⚡ button injection FAILED via', slot.method, ':', e.message);
+      gpmError('⚡ button injection FAILED via', slot.method, ':', e.message);
       gpmWarn('⚡ button injection failed via', slot.method, ':', e.message);
     }
   }
@@ -323,7 +374,7 @@ function gpmInjectQuickPromptTrigger() {
   if (existingBtn) return;
 
   // Ultimate fallback: floating button
-  console.log('[GPM-DIAG] Using floating fallback button');
+  gpmLog('Using floating fallback button');
   _gpmInjectFloatingQPButton();
 }
 
@@ -340,22 +391,17 @@ function _gpmVerifyButtonVisibility() {
   if (btn.dataset.gpmFloating === 'true') return;
 
   const rect = btn.getBoundingClientRect();
-  const isVisible = (
+  const isVisible =
     rect.width > 0 &&
     rect.height > 0 &&
     rect.bottom > 0 &&
     rect.right > 0 &&
     rect.top < window.innerHeight &&
-    rect.left < window.innerWidth
-  );
+    rect.left < window.innerWidth;
 
   // Also check computed visibility
   const style = window.getComputedStyle(btn);
-  const isStyleVisible = (
-    style.display !== 'none' &&
-    style.visibility !== 'hidden' &&
-    parseFloat(style.opacity) > 0
-  );
+  const isStyleVisible = style.display !== 'none' && style.visibility !== 'hidden' && parseFloat(style.opacity) > 0;
 
   // Check if any ancestor hides the button via overflow clipping
   let isClipped = false;
@@ -364,8 +410,12 @@ function _gpmVerifyButtonVisibility() {
     const ps = window.getComputedStyle(parent);
     if (ps.overflow === 'hidden' || ps.overflowX === 'hidden' || ps.overflowY === 'hidden') {
       const parentRect = parent.getBoundingClientRect();
-      if (rect.right < parentRect.left || rect.left > parentRect.right ||
-          rect.bottom < parentRect.top || rect.top > parentRect.bottom) {
+      if (
+        rect.right < parentRect.left ||
+        rect.left > parentRect.right ||
+        rect.bottom < parentRect.top ||
+        rect.top > parentRect.bottom
+      ) {
         isClipped = true;
         break;
       }
@@ -374,8 +424,15 @@ function _gpmVerifyButtonVisibility() {
   }
 
   if (!isVisible || !isStyleVisible || isClipped) {
-    gpmWarn('⚡ button not visible after injection (visible:', isVisible,
-      'styleVisible:', isStyleVisible, 'clipped:', isClipped, ') — switching to floating');
+    gpmWarn(
+      '⚡ button not visible after injection (visible:',
+      isVisible,
+      'styleVisible:',
+      isStyleVisible,
+      'clipped:',
+      isClipped,
+      ') — switching to floating'
+    );
     btn.remove();
     _gpmInjectFloatingQPButton();
   }
@@ -405,7 +462,11 @@ function gpmObserveQuickPromptButton() {
   }
 
   GPM_STATE._qpCheckInterval = setInterval(() => {
-    if (!gpmIsContextValid()) { clearInterval(GPM_STATE._qpCheckInterval); GPM_STATE._qpCheckInterval = null; return; }
+    if (!gpmIsContextValid()) {
+      clearInterval(GPM_STATE._qpCheckInterval);
+      GPM_STATE._qpCheckInterval = null;
+      return;
+    }
     const btn = document.querySelector('#gpm-qp-trigger');
 
     // If button exists, is connected, and is NOT floating — it's properly in the toolbar
@@ -423,19 +484,21 @@ function gpmObserveQuickPromptButton() {
     if (btn && btn.isConnected && btn.dataset.gpmFloating !== 'true') return;
 
     // Check if any mutation added nodes that look like a toolbar or input area
-    const toolbarAppeared = mutations.some(m => {
+    const toolbarAppeared = mutations.some((m) => {
       for (const node of m.addedNodes) {
         if (node.nodeType !== 1) continue;
         // Check if added node IS or CONTAINS a toolbar element
         try {
-          if (node.querySelector && (
-            node.querySelector(GPM_SELECTORS.leadingActions) ||
-            node.querySelector(GPM_SELECTORS.toolboxDrawer) ||
-            node.matches?.(GPM_SELECTORS.leadingActions) ||
-            node.querySelector(GPM_SELECTORS.inputArea) ||
-            // Content-based detection: look for "Tools" button text in added nodes
-            _gpmNodeContainsToolsLabel(node)
-          )) return true;
+          if (
+            node.querySelector &&
+            (node.querySelector(GPM_SELECTORS.leadingActions) ||
+              node.querySelector(GPM_SELECTORS.toolboxDrawer) ||
+              node.matches?.(GPM_SELECTORS.leadingActions) ||
+              node.querySelector(GPM_SELECTORS.inputArea) ||
+              // Content-based detection: look for "Tools" button text in added nodes
+              _gpmNodeContainsToolsLabel(node))
+          )
+            return true;
         } catch (_) {
           // Selector may be invalid in some edge cases — skip gracefully
         }
@@ -469,7 +532,11 @@ function gpmObserveQuickPromptButton() {
 async function gpmToggleQuickPrompts() {
   if (!GPM_STATE.modalRoot) return;
   const existing = GPM_STATE.modalRoot.querySelector('.gpm-quick-prompts');
-  if (existing) { existing.remove(); GPM_STATE.qpOpen = false; return; }
+  if (existing) {
+    existing.remove();
+    GPM_STATE.qpOpen = false;
+    return;
+  }
 
   GPM_STATE.qpOpen = true;
   const prompts = await GPMStorage.getQuickPrompts();
@@ -487,7 +554,7 @@ async function gpmToggleQuickPrompts() {
           GPM_STATE.modalRoot.querySelector('.gpm-quick-prompts')?.remove();
           gpmToggleQuickPrompts();
         },
-        onCancel: () => { }
+        onCancel: () => {},
       });
     },
     onEdit: (prompt) => {
@@ -498,7 +565,7 @@ async function gpmToggleQuickPrompts() {
           GPM_STATE.modalRoot.querySelector('.gpm-quick-prompts')?.remove();
           gpmToggleQuickPrompts();
         },
-        onCancel: () => { }
+        onCancel: () => {},
       });
     },
     onDelete: (prompt) => {
@@ -511,7 +578,7 @@ async function gpmToggleQuickPrompts() {
           await GPMStorage.deleteQuickPrompt(prompt.id);
           GPM_STATE.modalRoot.querySelector('.gpm-quick-prompts')?.remove();
           gpmToggleQuickPrompts();
-        }
+        },
       });
     },
     onBackup: async () => {
@@ -541,10 +608,18 @@ async function gpmToggleQuickPrompts() {
               // Merge: add imported prompts with validation
               let importedCount = 0;
               for (const p of imported) {
-                if (p && typeof p === 'object' && typeof p.title === 'string' && typeof p.content === 'string' && p.title.trim() && p.content.trim()) {
+                if (
+                  p &&
+                  typeof p === 'object' &&
+                  typeof p.title === 'string' &&
+                  typeof p.content === 'string' &&
+                  p.title.trim() &&
+                  p.content.trim()
+                ) {
                   const safeTitle = p.title.replace(/[<>]/g, '').trim();
                   const safeContent = p.content.replace(/[<>]/g, '').trim();
-                  const safeCategory = (typeof p.category === 'string' ? p.category.replace(/[<>]/g, '').trim() : 'General') || 'General';
+                  const safeCategory =
+                    (typeof p.category === 'string' ? p.category.replace(/[<>]/g, '').trim() : 'General') || 'General';
                   await GPMStorage.saveQuickPrompt({ title: safeTitle, content: safeContent, category: safeCategory });
                   importedCount++;
                 }
@@ -555,7 +630,8 @@ async function gpmToggleQuickPrompts() {
             }
           } catch (err) {
             gpmError('Failed to restore prompts:', err);
-            if (GPM_STATE.modalRoot) GPMUI.showAlertDialog(GPM_STATE.modalRoot, { title: t('restore'), message: t('importError') });
+            if (GPM_STATE.modalRoot)
+              GPMUI.showAlertDialog(GPM_STATE.modalRoot, { title: t('restore'), message: t('importError') });
           }
         };
         reader.readAsText(file);
@@ -564,7 +640,10 @@ async function gpmToggleQuickPrompts() {
       document.body.appendChild(fileInput);
       fileInput.click();
     },
-    onClose: () => { GPM_STATE.modalRoot.querySelector('.gpm-quick-prompts')?.remove(); GPM_STATE.qpOpen = false; }
+    onClose: () => {
+      GPM_STATE.modalRoot.querySelector('.gpm-quick-prompts')?.remove();
+      GPM_STATE.qpOpen = false;
+    },
   });
   GPM_STATE.modalRoot.appendChild(panel);
 }
@@ -632,7 +711,7 @@ function gpmInsertPromptText(text) {
       bubbles: true,
       cancelable: true,
       inputType: 'insertText',
-      data: text
+      data: text,
     });
     input.dispatchEvent(inputEvent);
 
@@ -641,11 +720,13 @@ function gpmInsertPromptText(text) {
       input.textContent = text;
     }
 
-    input.dispatchEvent(new InputEvent('input', {
-      bubbles: true,
-      data: text,
-      inputType: 'insertText'
-    }));
+    input.dispatchEvent(
+      new InputEvent('input', {
+        bubbles: true,
+        data: text,
+        inputType: 'insertText',
+      })
+    );
 
     if (input.textContent.includes(text.slice(0, 20))) {
       gpmLog('Prompt inserted via InputEvent simulation');
@@ -665,7 +746,7 @@ function gpmInsertPromptText(text) {
     const pasteEvent = new ClipboardEvent('paste', {
       bubbles: true,
       cancelable: true,
-      clipboardData: clipboardData
+      clipboardData: clipboardData,
     });
     input.dispatchEvent(pasteEvent);
 

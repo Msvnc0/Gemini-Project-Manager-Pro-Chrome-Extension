@@ -12,9 +12,26 @@
  *   gpm_quickPrompts: Array<{ id, title, content, category }>
  *   gpm_settings: { lang, theme }
  *   gpm_backup_current: { type: string, data: { projects, chatMap, prompts }, timestamp: number }
+ *   gpm_favorites: string[] — array of favorited project IDs
  */
 
 const GPM_SCHEMA_VERSION = 5;
+
+const GPM_LEGACY_KEYS = [
+  'gpm_projects_backup',
+  'gpm_backup_ts',
+  'gpm_chatMap_backup',
+  'gpm_pre_import_projects',
+  'gpm_pre_import_chatMap',
+  'gpm_pre_import_quickPrompts',
+  'gpm_pre_import_ts',
+  'gpm_pre_migration_backup',
+  'gpm_update_backup',
+  'gpm_emergency_backup_before_reset',
+  'gpm_projects_pre_restore',
+  'gpm_backups',
+  'gpm_tags',
+];
 
 const GPMStorage = (() => {
   const MIGRATIONS = {
@@ -56,21 +73,7 @@ const GPMStorage = (() => {
       return data;
     },
     5: (data) => {
-      const legacyKeys = [
-        'gpm_projects_backup',
-        'gpm_backup_ts',
-        'gpm_chatMap_backup',
-        'gpm_pre_import_projects',
-        'gpm_pre_import_chatMap',
-        'gpm_pre_import_quickPrompts',
-        'gpm_pre_import_ts',
-        'gpm_pre_migration_backup',
-        'gpm_update_backup',
-        'gpm_emergency_backup_before_reset',
-        'gpm_projects_pre_restore',
-        'gpm_backups',
-      ];
-      for (const key of legacyKeys) {
+      for (const key of GPM_LEGACY_KEYS) {
         if (data[key] !== undefined) delete data[key];
       }
       return data;
@@ -97,21 +100,7 @@ const GPMStorage = (() => {
       const allData = await chrome.storage.local.get(null);
       const migratedData = await runMigrations(allData, currentVersion);
 
-      const legacyKeys = [
-        'gpm_projects_backup',
-        'gpm_backup_ts',
-        'gpm_chatMap_backup',
-        'gpm_pre_import_projects',
-        'gpm_pre_import_chatMap',
-        'gpm_pre_import_quickPrompts',
-        'gpm_pre_import_ts',
-        'gpm_pre_migration_backup',
-        'gpm_update_backup',
-        'gpm_emergency_backup_before_reset',
-        'gpm_projects_pre_restore',
-        'gpm_backups',
-      ];
-      const keysToRemove = legacyKeys.filter((k) => migratedData[k] === undefined && allData[k] !== undefined);
+      const keysToRemove = GPM_LEGACY_KEYS.filter((k) => migratedData[k] === undefined && allData[k] !== undefined);
       if (keysToRemove.length > 0) {
         await chrome.storage.local.remove(keysToRemove);
       }
@@ -119,13 +108,6 @@ const GPMStorage = (() => {
       await chrome.storage.local.set(migratedData);
       console.log(`[GPM Storage] Migrated from v${currentVersion} to ${GPM_SCHEMA_VERSION}`);
     }
-  }
-
-  function uid() {
-    const timestamp = Date.now().toString(36);
-    const random1 = crypto.getRandomValues(new Uint32Array(1))[0].toString(36);
-    const random2 = crypto.getRandomValues(new Uint32Array(1))[0].toString(36);
-    return `${timestamp}-${random1}-${random2}`;
   }
 
   let _localLock = Promise.resolve();
@@ -252,7 +234,7 @@ const GPMStorage = (() => {
 
   async function createProject({ name, icon = '📁', color = '#8ab4f8', parentId = null }) {
     const projects = await getProjects();
-    const id = uid();
+    const id = generateUid();
     const project = { id, name, icon, color, parentId, children: [], chatIds: [], collapsed: false };
     projects.push(project);
 
@@ -392,7 +374,7 @@ const GPMStorage = (() => {
 
   async function saveQuickPrompt({ title, content, category = 'General' }) {
     const prompts = await getQuickPrompts();
-    prompts.push({ id: uid(), title, content, category });
+    prompts.push({ id: generateUid(), title, content, category });
     await _set('gpm_quickPrompts', prompts);
   }
 
@@ -452,11 +434,6 @@ const GPMStorage = (() => {
     );
   }
 
-  const sanitizeString = GPMValidators.sanitizeString;
-  const validateProject = GPMValidators.validateProject;
-  const validateChatMapping = GPMValidators.validateChatMapping;
-  const validateQuickPrompt = GPMValidators.validateQuickPrompt;
-  const validateSettings = GPMValidators.validateSettings;
   const validateImportData = GPMValidators.validateImportData;
 
   async function importAll(jsonString) {

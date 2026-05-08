@@ -189,8 +189,10 @@ function getBytesInUse() {
   });
 }
 
+let _mockLockGranted = true;
+
 function runtimeSendMessage(msg) {
-  if (msg && msg.type === 'GPM_ACQUIRE_LOCK') return Promise.resolve({ granted: true });
+  if (msg && msg.type === 'GPM_ACQUIRE_LOCK') return Promise.resolve({ granted: _mockLockGranted });
   if (msg && msg.type === 'GPM_RELEASE_LOCK') return Promise.resolve({ ok: true });
   if (msg && msg.type === 'GPM_STORAGE_UPDATED') return Promise.resolve({ ok: true });
   return Promise.resolve();
@@ -333,8 +335,10 @@ export function triggerStorageOnChanged(changes, areaName = 'local') {
   storageChangeListeners.forEach((listener) => listener(changes, areaName));
 }
 
+export function setMockLockGranted(granted) {
+  _mockLockGranted = granted;
+}
+
 export { chromeMock };
 
-// Legacy section follows for compatibility
-let __legacyDoNotUse = null;
 

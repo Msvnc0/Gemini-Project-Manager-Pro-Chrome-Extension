@@ -15,7 +15,7 @@
  *   - templates/        → Folder templates
  *   - keyboard/         → Keyboard shortcuts
  *   - history/          → Undo/redo system
- *   - performance/      → Virtualized list
+ *   - performance/      → (reserved for future use)
  *   - analytics/        → Usage tracking
  */
 

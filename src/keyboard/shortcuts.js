@@ -172,7 +172,17 @@ const GPMKeyboardShortcuts = (() => {
     gpmLog('[GPM Keyboard] Shortcuts initialized');
   }
 
+  function destroy() {
+    if (_abortController) {
+      _abortController.abort();
+      _abortController = null;
+    }
+    _initialized = false;
+    gpmLog('[GPM Keyboard] Shortcuts destroyed');
+  }
+
   return {
     init,
+    destroy,
   };
 })();

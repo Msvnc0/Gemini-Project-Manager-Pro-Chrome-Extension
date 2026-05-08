@@ -89,9 +89,23 @@ const GPMHistory = (() => {
           type,
           projectData: data.projectData,
           chatMapData: data.chatMapData,
+          capturedProjects: data.capturedProjects || [data.projectData],
           undo: async () => {
             const projects = await GPMStorage.getProjects();
-            projects.push(data.projectData);
+
+            for (const p of data.capturedProjects || [data.projectData]) {
+              if (!projects.find((existing) => existing.id === p.id)) {
+                projects.push(p);
+              }
+            }
+
+            if (data.projectData.parentId) {
+              const parent = projects.find((p) => p.id === data.projectData.parentId);
+              if (parent && !parent.children.includes(data.projectData.id)) {
+                parent.children.push(data.projectData.id);
+              }
+            }
+
             await GPMStorage.saveProjects(projects);
 
             const chatMap = await GPMStorage.getChatMap();

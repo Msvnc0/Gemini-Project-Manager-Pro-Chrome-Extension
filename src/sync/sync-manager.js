@@ -53,7 +53,7 @@ const GPMSyncManager = (() => {
       const result = await chrome.storage.sync.get(SYNC_META_KEY);
       return result[SYNC_META_KEY] || null;
     } catch (e) {
-      console.warn('[GPM Sync] Could not read sync meta:', e);
+      gpmWarn('[GPM Sync] Could not read sync meta:', e);
       return null;
     }
   }
@@ -63,7 +63,7 @@ const GPMSyncManager = (() => {
       await chrome.storage.sync.set({ [SYNC_META_KEY]: meta });
       return true;
     } catch (e) {
-      console.error('[GPM Sync] Could not write sync meta:', e);
+      gpmError('[GPM Sync] Could not write sync meta:', e);
       return false;
     }
   }

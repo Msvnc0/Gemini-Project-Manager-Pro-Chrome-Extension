@@ -194,8 +194,7 @@ describe('_gpmStructuralDiscovery', () => {
       // jsdom may not fully support activeElement for contenteditable
       // but we test the function doesn't crash
       const result = _gpmStructuralDiscovery.inputArea();
-      // Result may be null in jsdom since focus behavior differs
-      expect(result === null || result === el).toBe(true);
+      expect(result).toBeNull();
 
       el.remove();
     });
