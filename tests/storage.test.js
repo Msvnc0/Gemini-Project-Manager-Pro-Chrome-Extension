@@ -78,7 +78,7 @@ describe('Schema Migration v5', () => {
       gpm_pre_import_ts: Date.now(),
       gpm_update_backup: {},
       gpm_emergency_backup_before_reset: {},
-      gpm_backups: [],
+      gpm_backups: [{ id: 'bk1', ts: Date.now() }],
     });
 
     await GPMStorage.initializeStorage();
@@ -92,7 +92,7 @@ describe('Schema Migration v5', () => {
     expect(storage.gpm_pre_import_ts).toBeUndefined();
     expect(storage.gpm_update_backup).toBeUndefined();
     expect(storage.gpm_emergency_backup_before_reset).toBeUndefined();
-    expect(storage.gpm_backups).toBeUndefined();
+    expect(storage.gpm_backups).toEqual([{ id: 'bk1', ts: expect.any(Number) }]);
   });
 });
 

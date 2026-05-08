@@ -168,7 +168,7 @@ async function gpmRunMigrations(currentVersion) {
     'gpm_update_backup',
     'gpm_emergency_backup_before_reset',
     'gpm_projects_pre_restore',
-    'gpm_backups',
+    'gpm_tags',
   ];
   const keysToRemove = legacyKeys.filter((k) => allData[k] !== undefined);
   if (keysToRemove.length > 0) {

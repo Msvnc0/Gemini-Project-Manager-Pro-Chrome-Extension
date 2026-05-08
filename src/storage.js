@@ -29,7 +29,6 @@ const GPM_LEGACY_KEYS = [
   'gpm_update_backup',
   'gpm_emergency_backup_before_reset',
   'gpm_projects_pre_restore',
-  'gpm_backups',
   'gpm_tags',
 ];
 
