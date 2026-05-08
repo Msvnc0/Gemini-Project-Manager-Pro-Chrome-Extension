@@ -57,10 +57,17 @@ const GPMKeyboardShortcuts = (() => {
       }
     },
 
-    closeModal: () => {
-      const overlay = document.querySelector('.gpm-overlay');
+    closeModal: function () {
+      var overlays = document.querySelectorAll('.gpm-overlay');
+      var overlay = overlays[overlays.length - 1];
       if (overlay) {
-        overlay.remove();
+        var closeBtn = overlay.querySelector('[data-gpm="close"]');
+        if (closeBtn) {
+          closeBtn.click();
+        } else {
+          overlay.dispatchEvent(new CustomEvent('gpm-close'));
+          overlay.remove();
+        }
       }
     },
 

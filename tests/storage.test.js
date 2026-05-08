@@ -573,7 +573,7 @@ describe('GPMStorage', () => {
 
       const projects = await GPMStorage.getProjects();
       expect(projects).toHaveLength(1);
-      expect(projects[0].name).toBe('Safescript'); // sanitized
+      expect(projects[0].name).toBe('Safe<script>'); // preserved — textContent-safe
 
       const settings = await GPMStorage.getSettings();
       expect(settings.lang).toBe('en'); // fallback

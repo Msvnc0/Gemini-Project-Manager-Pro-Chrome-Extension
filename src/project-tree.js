@@ -497,11 +497,14 @@ function gpmCreateProjectRow(project, allProjects, chatMap, childMap) {
     // Check if a PROJECT is being dropped
     const droppedProjectId = e.dataTransfer.getData('text/gpm-project-id');
     if (droppedProjectId && droppedProjectId !== project.id) {
-      const isDescendant = (parentId, childId) => {
+      const isDescendant = (parentId, childId, visited) => {
+        if (!visited) visited = new Set();
+        if (visited.has(childId)) return false;
+        visited.add(childId);
         const p = allProjects.find((pr) => pr.id === childId);
         if (!p) return false;
         if (p.parentId === parentId) return true;
-        if (p.parentId) return isDescendant(parentId, p.parentId);
+        if (p.parentId) return isDescendant(parentId, p.parentId, visited);
         return false;
       };
 
@@ -521,8 +524,10 @@ function gpmCreateProjectRow(project, allProjects, chatMap, childMap) {
           if (oldParent) oldParent.children = oldParent.children.filter((c) => c !== droppedProjectId);
         }
         droppedProject.parentId = project.id;
-        if (!project.children) project.children = [];
-        if (!project.children.includes(droppedProjectId)) project.children.push(droppedProjectId);
+        const freshTarget = projects.find((p) => p.id === project.id);
+        if (!freshTarget) return;
+        if (!freshTarget.children) freshTarget.children = [];
+        if (!freshTarget.children.includes(droppedProjectId)) freshTarget.children.push(droppedProjectId);
         await GPMStorage.saveProjects(projects);
       } else {
         // ── REORDER: move droppedProject before/after project (same level) ──

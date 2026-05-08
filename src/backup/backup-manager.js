@@ -100,18 +100,14 @@ const GPMBackupManager = (() => {
 
       const data = backup.data;
 
-      if (data.projects) {
-        await GPMStorage.saveProjects(data.projects);
-      }
-      if (data.chatMap) {
-        await GPMStorage.saveChatMap(data.chatMap);
-      }
-      if (data.prompts) {
-        await chrome.storage.local.set({ gpm_quickPrompts: data.prompts });
-      }
-      if (data.settings) {
-        await GPMStorage.saveSettings(data.settings);
-      }
+      await GPMStorage.importAll(
+        JSON.stringify({
+          gpm_projects: data.projects || [],
+          gpm_chatMap: data.chatMap || {},
+          gpm_quickPrompts: data.prompts || [],
+          gpm_settings: data.settings || { lang: 'en', theme: 'auto' },
+        })
+      );
 
       gpmLog('Restored from backup:', backupId);
       return true;
@@ -154,11 +150,8 @@ const GPMBackupManager = (() => {
   }
 
   return {
-    MAX_VERSIONS,
-    TRIGGERS,
     createBackup,
     getBackups,
-    getBackup,
     restoreBackup,
     deleteBackup,
     autoBackupIfNeeded,

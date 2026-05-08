@@ -27,12 +27,11 @@ describe('GPMUsageTracker', () => {
     expect(analytics.featureUsage).toBeDefined();
   });
 
-  it('saves and retrieves analytics', async () => {
-    const data = { projectAccess: { p1: 5 }, featureUsage: {}, totalSessions: 3 };
-    await globalThis.GPMUsageTracker.saveAnalytics(data);
+  it('saves and retrieves analytics via trackFeatureUsage', async () => {
+    await globalThis.GPMUsageTracker.trackFeatureUsage('sidebar');
     const analytics = await globalThis.GPMUsageTracker.getAnalytics();
-    expect(analytics.projectAccess.p1).toBe(5);
-    expect(analytics.totalSessions).toBe(3);
+    expect(analytics.featureUsage.sidebar).toBeDefined();
+    expect(analytics.featureUsage.sidebar.count).toBe(1);
   });
 
   it('tracks feature usage', async () => {

@@ -32,12 +32,6 @@ function _gpmCreateQPButton() {
   btn.type = 'button';
   btn.style.cssText =
     'background:none;border:none;font-size:18px;cursor:pointer;padding:4px 8px;border-radius:50%;color:inherit;opacity:0.6;transition:opacity 150ms;display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;flex-shrink:0;vertical-align:middle;';
-  btn.addEventListener('mouseenter', () => {
-    btn.style.opacity = '1';
-  });
-  btn.addEventListener('mouseleave', () => {
-    btn.style.opacity = '0.6';
-  });
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
     e.preventDefault();
@@ -597,6 +591,12 @@ async function gpmToggleQuickPrompts() {
       fileInput.type = 'file';
       fileInput.accept = '.json';
       fileInput.style.display = 'none';
+      var cleaned = false;
+      var cleanup = function () {
+        if (cleaned) return;
+        cleaned = true;
+        fileInput.remove();
+      };
       fileInput.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -625,17 +625,24 @@ async function gpmToggleQuickPrompts() {
                 }
               }
               gpmLog('Imported', importedCount, 'prompts (skipped', imported.length - importedCount, 'invalid)');
+              cleanup();
               GPM_STATE.modalRoot.querySelector('.gpm-quick-prompts')?.remove();
               gpmToggleQuickPrompts();
             }
           } catch (err) {
             gpmError('Failed to restore prompts:', err);
+            cleanup();
             if (GPM_STATE.modalRoot)
               GPMUI.showAlertDialog(GPM_STATE.modalRoot, { title: t('restore'), message: t('importError') });
           }
         };
         reader.readAsText(file);
-        fileInput.remove();
+        cleanup();
+      });
+      var cancelTimeout = setTimeout(cleanup, 60000);
+      fileInput.addEventListener('cancel', function () {
+        clearTimeout(cancelTimeout);
+        cleanup();
       });
       document.body.appendChild(fileInput);
       fileInput.click();

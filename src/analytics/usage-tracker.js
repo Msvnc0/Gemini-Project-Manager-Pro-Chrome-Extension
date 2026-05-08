@@ -70,7 +70,6 @@ const GPMUsageTracker = (() => {
 
   return {
     getAnalytics,
-    saveAnalytics,
     trackFeatureUsage,
     trackSession,
   };

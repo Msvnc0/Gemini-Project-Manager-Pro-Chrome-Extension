@@ -70,7 +70,7 @@ const GPM_STATE = {
   _sidebarStableCount: 0,
   _lastSidebarChatCount: 0,
   _sidebarStabilizeTimer: null,
-  _renderId: 0,
+  _searchQuery: '',
   spaObserversActive: false,
 };
 
@@ -103,6 +103,12 @@ function gpmResetState() {
   if (typeof gpmCleanupObservers === 'function') {
     gpmCleanupObservers();
   }
+  if (typeof window.gpmStopHealthMonitor === 'function') {
+    window.gpmStopHealthMonitor();
+  }
+  if (typeof GPMSyncManager !== 'undefined' && GPMSyncManager.stopAutoSync) {
+    GPMSyncManager.stopAutoSync();
+  }
   GPM_STATE.container = null;
   GPM_STATE.modalHost = null;
   GPM_STATE.modalRoot = null;
@@ -120,7 +126,10 @@ function gpmResetState() {
   GPM_STATE._sidebarStableCount = 0;
   GPM_STATE._lastSidebarChatCount = 0;
   GPM_STATE._sidebarStabilizeTimer = null;
+  GPM_STATE.healthCheckTimer = null;
   GPM_STATE.spaObserversActive = false;
+  GPM_STATE._searchQuery = '';
+  GPM_STATE._matchCache = null;
   if (typeof gpmResetObserversFlag === 'function') {
     gpmResetObserversFlag();
   }
@@ -198,19 +207,22 @@ function extractChatIdFromUrl(urlOrHref) {
  * @param {number} timeout — Maximum wait time in ms
  * @returns {Promise<Element|null>}
  */
-function gpmWaitForElement(selector, timeout = 10000) {
-  return new Promise((resolve) => {
-    const el = document.querySelector(selector);
+function gpmWaitForElement(selector, timeout) {
+  if (timeout === undefined) timeout = 10000;
+  return new Promise(function (resolve) {
+    var el = document.querySelector(selector);
     if (el) return resolve(el);
-    const observer = new MutationObserver((_, obs) => {
-      const found = document.querySelector(selector);
+    var timer;
+    var observer = new MutationObserver(function (_, obs) {
+      var found = document.querySelector(selector);
       if (found) {
         obs.disconnect();
+        clearTimeout(timer);
         resolve(found);
       }
     });
     observer.observe(document.body, { childList: true, subtree: true });
-    setTimeout(() => {
+    timer = setTimeout(function () {
       observer.disconnect();
       resolve(null);
     }, timeout);

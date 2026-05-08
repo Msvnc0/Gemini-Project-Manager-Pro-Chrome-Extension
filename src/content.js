@@ -32,7 +32,10 @@ function gpmResetObserversFlag() {
 async function gpmInit() {
   if (GPM_STATE.initialized) return;
 
-  gpmLog('gpmInit() started - v2.0.0');
+  gpmLog(
+    'gpmInit() started - v' +
+      (typeof chrome !== 'undefined' && chrome.runtime?.getManifest ? chrome.runtime.getManifest().version : 'dev')
+  );
 
   // ── Step 1: Storage initialization & schema migration ──
   try {
@@ -212,10 +215,13 @@ try {
 //  BOOT
 // ══════════════════════════════════════
 
-(function boot() {
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', gpmInit);
-  } else {
-    gpmInit();
+(async function boot() {
+  try {
+    if (document.readyState === 'loading') {
+      await new Promise((resolve) => document.addEventListener('DOMContentLoaded', resolve));
+    }
+    await gpmInit();
+  } catch (e) {
+    gpmError('Fatal: gpmInit() failed:', e);
   }
 })();

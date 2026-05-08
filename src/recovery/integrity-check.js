@@ -262,8 +262,8 @@ const GPMIntegrityCheck = (() => {
 
     if (fixed.length > 0) {
       if (fixed.some((f) => f.type === 'orphaned_chatmap_entries')) {
-        const updates = { gpm_projects: projects, gpm_chatMap: chatMap };
-        await chrome.storage.local.set(updates);
+        await GPMStorage.saveProjects(projects);
+        await GPMStorage.saveChatMap(chatMap);
       } else {
         await GPMStorage.saveProjects(projects);
       }

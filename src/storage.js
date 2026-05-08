@@ -158,7 +158,10 @@ const GPMStorage = (() => {
     try {
       await chrome.storage.local.set({ [key]: value });
     } catch (e) {
-      if (e.message?.includes('Extension context invalidated')) return;
+      if (e.message?.includes('Extension context invalidated')) {
+        gpmWarn('Write skipped — extension context invalidated');
+        return;
+      }
       throw e;
     }
   }
@@ -167,7 +170,10 @@ const GPMStorage = (() => {
     try {
       await chrome.storage.local.set(data);
     } catch (e) {
-      if (e.message?.includes('Extension context invalidated')) return;
+      if (e.message?.includes('Extension context invalidated')) {
+        gpmWarn('Write skipped — extension context invalidated');
+        return;
+      }
       throw e;
     }
   }
@@ -206,10 +212,14 @@ const GPMStorage = (() => {
   async function _saveAtomic(projects, chatMap) {
     const currentProjects = await _get('gpm_projects');
     const currentChatMap = await _get('gpm_chatMap');
+    const currentPrompts = await _get('gpm_quickPrompts');
+    const currentSettings = await _get('gpm_settings');
 
     await _writeBackup('auto', {
       projects: currentProjects,
       chatMap: currentChatMap,
+      prompts: currentPrompts,
+      settings: currentSettings,
     });
 
     await _setBulk({
@@ -227,25 +237,32 @@ const GPMStorage = (() => {
       const current = await _get('gpm_projects');
       const chatMap = await _get('gpm_chatMap');
       if (current && Array.isArray(current) && current.length > 0) {
-        await _writeBackup('auto', { projects: current, chatMap: chatMap });
+        await _writeBackup('auto', {
+          projects: current,
+          chatMap: chatMap,
+          prompts: await _get('gpm_quickPrompts'),
+          settings: await _get('gpm_settings'),
+        });
       }
       await _set('gpm_projects', projects);
     });
   }
 
   async function createProject({ name, icon = '📁', color = '#8ab4f8', parentId = null }) {
-    const projects = await getProjects();
-    const id = generateUid();
-    const project = { id, name, icon, color, parentId, children: [], chatIds: [], collapsed: false };
-    projects.push(project);
+    return _withLock(async () => {
+      const projects = await getProjects();
+      const id = generateUid();
+      const project = { id, name, icon, color, parentId, children: [], chatIds: [], collapsed: false };
+      projects.push(project);
 
-    if (parentId) {
-      const parent = projects.find((p) => p.id === parentId);
-      if (parent) parent.children.push(id);
-    }
+      if (parentId) {
+        const parent = projects.find((p) => p.id === parentId);
+        if (parent) parent.children.push(id);
+      }
 
-    await saveProjects(projects);
-    return project;
+      await _set('gpm_projects', projects);
+      return project;
+    });
   }
 
   async function updateProject(id, updates) {
@@ -306,7 +323,12 @@ const GPMStorage = (() => {
       const current = await _get('gpm_chatMap');
       const projects = await _get('gpm_projects');
       if (current && Object.keys(current).length > 0) {
-        await _writeBackup('auto', { projects: projects, chatMap: current });
+        await _writeBackup('auto', {
+          projects: projects,
+          chatMap: current,
+          prompts: await _get('gpm_quickPrompts'),
+          settings: await _get('gpm_settings'),
+        });
       }
       await _set('gpm_chatMap', map);
     });
@@ -327,6 +349,7 @@ const GPMStorage = (() => {
         alias: chatMap[chatId]?.alias || '',
         pinned: chatMap[chatId]?.pinned || false,
         _autoResolved: chatMap[chatId]?._autoResolved || false,
+        starredAt: chatMap[chatId]?.starredAt ?? null,
       };
 
       const newProj = projects.find((p) => p.id === projectId);
@@ -382,22 +405,28 @@ const GPMStorage = (() => {
   }
 
   async function saveQuickPrompt({ title, content, category = 'General' }) {
-    const prompts = await getQuickPrompts();
-    prompts.push({ id: generateUid(), title, content, category });
-    await _set('gpm_quickPrompts', prompts);
+    return _withLock(async () => {
+      const prompts = await getQuickPrompts();
+      prompts.push({ id: generateUid(), title, content, category });
+      await _set('gpm_quickPrompts', prompts);
+    });
   }
 
   async function deleteQuickPrompt(id) {
-    let prompts = await getQuickPrompts();
-    prompts = prompts.filter((p) => p.id !== id);
-    await _set('gpm_quickPrompts', prompts);
+    return _withLock(async () => {
+      let prompts = await getQuickPrompts();
+      prompts = prompts.filter((p) => p.id !== id);
+      await _set('gpm_quickPrompts', prompts);
+    });
   }
 
   async function updateQuickPrompt(id, updates) {
-    const prompts = await getQuickPrompts();
-    const idx = prompts.findIndex((p) => p.id === id);
-    if (idx !== -1) Object.assign(prompts[idx], updates);
-    await _set('gpm_quickPrompts', prompts);
+    return _withLock(async () => {
+      const prompts = await getQuickPrompts();
+      const idx = prompts.findIndex((p) => p.id === id);
+      if (idx !== -1) Object.assign(prompts[idx], updates);
+      await _set('gpm_quickPrompts', prompts);
+    });
   }
 
   async function toggleStarChat(chatId) {

@@ -113,7 +113,9 @@ const GPMHistory = (() => {
             await GPMStorage.saveProjects(projects);
 
             const chatMap = await GPMStorage.getChatMap();
-            Object.assign(chatMap, data.chatMapData);
+            for (const [chatId, mapping] of Object.entries(data.chatMapData || {})) {
+              chatMap[chatId] = mapping;
+            }
             await GPMStorage.saveChatMap(chatMap);
 
             gpmRenderTree();
@@ -135,6 +137,10 @@ const GPMHistory = (() => {
           },
           redo: async () => {
             const projects = await GPMStorage.getProjects();
+            if (projects.find((p) => p.id === data.projectId)) {
+              gpmWarn('[GPM History] create_project redo skipped — project already exists');
+              return;
+            }
             projects.push(data.projectData);
             if (data.projectData.parentId) {
               const parent = projects.find((p) => p.id === data.projectData.parentId);
@@ -143,58 +149,6 @@ const GPMHistory = (() => {
               }
             }
             await GPMStorage.saveProjects(projects);
-            gpmRenderTree();
-          },
-        };
-
-      case 'rename_project':
-        return {
-          type,
-          projectId: data.projectId,
-          oldName: data.oldName,
-          newName: data.newName,
-          undo: async () => {
-            await GPMStorage.updateProject(data.projectId, { name: data.oldName });
-            gpmRenderTree();
-          },
-          redo: async () => {
-            await GPMStorage.updateProject(data.projectId, { name: data.newName });
-            gpmRenderTree();
-          },
-        };
-
-      case 'rename_chat':
-        return {
-          type,
-          chatId: data.chatId,
-          oldAlias: data.oldAlias,
-          newAlias: data.newAlias,
-          undo: async () => {
-            await GPMStorage.setChatAlias(data.chatId, data.oldAlias);
-            gpmRenderTree();
-          },
-          redo: async () => {
-            await GPMStorage.setChatAlias(data.chatId, data.newAlias);
-            gpmRenderTree();
-          },
-        };
-
-      case 'bulk_move':
-        return {
-          type,
-          chatIds: data.chatIds,
-          fromProjectIds: data.fromProjectIds,
-          toProjectId: data.toProjectId,
-          undo: async () => {
-            for (const chatId of data.chatIds) {
-              await GPMStorage.assignChat(chatId, data.fromProjectIds[chatId]);
-            }
-            gpmRenderTree();
-          },
-          redo: async () => {
-            for (const chatId of data.chatIds) {
-              await GPMStorage.assignChat(chatId, data.toProjectId);
-            }
             gpmRenderTree();
           },
         };
@@ -209,5 +163,7 @@ const GPMHistory = (() => {
     undo,
     redo,
     createAction,
+    canUndo,
+    canRedo,
   };
 })();

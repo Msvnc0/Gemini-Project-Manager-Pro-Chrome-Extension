@@ -50,15 +50,11 @@ describe('GPMHistory createAction', () => {
     GPMHistory.push(action);
   });
 
-  it('creates bulk_move action', () => {
-    const action = GPMHistory.createAction('bulk_move', {
-      chatIds: ['c1', 'c2'],
-      fromProjectIds: { c1: 'p1', c2: 'p1' },
-      toProjectId: 'p2',
-    });
-    expect(action).not.toBeNull();
-    expect(action.type).toBe('bulk_move');
-    expect(action.chatIds).toEqual(['c1', 'c2']);
+  it('exposes canUndo and canRedo', () => {
+    expect(typeof GPMHistory.canUndo).toBe('function');
+    expect(typeof GPMHistory.canRedo).toBe('function');
+    expect(typeof GPMHistory.canUndo()).toBe('boolean');
+    expect(typeof GPMHistory.canRedo()).toBe('boolean');
   });
 
   it('returns null for unknown type', () => {

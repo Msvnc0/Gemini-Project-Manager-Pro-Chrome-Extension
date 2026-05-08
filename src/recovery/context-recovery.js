@@ -1,8 +1,8 @@
 const GPMContextRecovery = (() => {
   let isInvalidated = false;
-  let lastValidCheck = Date.now();
   let checkInterval = null;
   let recoveryOverlay = null;
+  let countdownInterval = null;
 
   const CHECK_INTERVAL_MS = 2000;
 
@@ -17,6 +17,7 @@ const GPMContextRecovery = (() => {
       }
       if (isValid && isInvalidated) {
         isInvalidated = false;
+        dismissRecoveryUI();
       }
     }, CHECK_INTERVAL_MS);
 
@@ -26,9 +27,6 @@ const GPMContextRecovery = (() => {
   function checkContext() {
     try {
       const isValid = !!(chrome.runtime && chrome.runtime.id);
-      if (isValid) {
-        lastValidCheck = Date.now();
-      }
       return isValid;
     } catch (e) {
       return false;
@@ -70,7 +68,7 @@ const GPMContextRecovery = (() => {
 
     const overlay = document.createElement('div');
     overlay.style.cssText =
-      'position:fixed;inset:0;background:rgba(0,0,0,0,0.85);z-index:999999;' +
+      'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:999999;' +
       'display:flex;flex-direction:column;align-items:center;justify-content:center;' +
       'color:#e3e3e3;font-family:"Google Sans","Segoe UI",system-ui,sans-serif;' +
       'animation:gpm-fade-in 200ms ease;';
@@ -116,6 +114,7 @@ const GPMContextRecovery = (() => {
     recoveryOverlay = overlay;
 
     reloadBtn.addEventListener('click', () => {
+      dismissRecoveryUI();
       location.reload();
     });
 
@@ -126,16 +125,26 @@ const GPMContextRecovery = (() => {
     let seconds = 10;
     const countdownEl = document.getElementById('gpm-reload-countdown');
 
-    const interval = setInterval(() => {
+    countdownInterval = setInterval(() => {
       seconds--;
-      if (countdownEl) {
-        countdownEl.textContent = seconds;
-      }
+      if (countdownEl) countdownEl.textContent = seconds;
       if (seconds <= 0) {
-        clearInterval(interval);
+        clearInterval(countdownInterval);
+        countdownInterval = null;
         location.reload();
       }
     }, 1000);
+  }
+
+  function dismissRecoveryUI() {
+    if (countdownInterval) {
+      clearInterval(countdownInterval);
+      countdownInterval = null;
+    }
+    if (recoveryOverlay && recoveryOverlay.parentNode) {
+      recoveryOverlay.remove();
+    }
+    recoveryOverlay = null;
   }
 
   function isContextValid() {
@@ -147,6 +156,7 @@ const GPMContextRecovery = (() => {
       clearInterval(checkInterval);
       checkInterval = null;
     }
+    dismissRecoveryUI();
     gpmLog('Context recovery monitoring stopped');
   }
 

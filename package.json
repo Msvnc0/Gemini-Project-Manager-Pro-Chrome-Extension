@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "lint": "eslint src/",
+    "lint:all": "eslint src/ tests/",
     "lint:fix": "eslint src/ --fix",
     "format": "prettier --write \"src/**/*.{js,css,json}\"",
     "format:check": "prettier --check \"src/**/*.{js,css,json}\"",

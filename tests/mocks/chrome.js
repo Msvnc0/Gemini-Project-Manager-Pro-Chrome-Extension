@@ -231,6 +231,7 @@ function resetAllMocks() {
   resetRuntimeMocks();
   resetTabMocks();
   resetStorageChangeListeners();
+  _mockLockGranted = true;
 }
 
 function installChromeMock() {

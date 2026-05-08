@@ -54,13 +54,11 @@ const GPMUI = (() => {
     '❤️',
     '🔍',
     '⚖️',
-    '🌐',
     '✈️',
     '🌎',
     '🐕',
     '📚',
     '👤',
-    '🔬',
     '🍀',
     '⭐',
     '🔖',
@@ -479,14 +477,22 @@ const GPMUI = (() => {
   function showContextMenu(shadowRoot, { x, y, items }) {
     shadowRoot.querySelectorAll('.gpm-context-menu').forEach((m) => m.remove());
 
+    if (typeof window._gpmContextMenuCleanup === 'function') {
+      window._gpmContextMenuCleanup();
+    }
+
     const menu = el('div', { className: 'gpm-context-menu', role: 'menu', style: { left: x + 'px', top: y + 'px' } });
 
-    const closeHandler = (e) => {
-      if (!menu.contains(e.target)) {
-        menu.remove();
-        shadowRoot.removeEventListener('click', closeHandler, true);
-        document.removeEventListener('click', closeHandler, true);
-      }
+    var closeHandler = function (e) {
+      if (menu.contains(e.target)) return;
+      cleanup();
+    };
+
+    var cleanup = function () {
+      menu.remove();
+      document.removeEventListener('click', closeHandler, true);
+      if (shadowRoot && shadowRoot !== document) shadowRoot.removeEventListener('click', closeHandler, true);
+      window._gpmContextMenuCleanup = null;
     };
 
     items.forEach((item) => {
@@ -573,8 +579,9 @@ const GPMUI = (() => {
     menu.style.top = finalY + 'px';
 
     setTimeout(() => {
-      shadowRoot.addEventListener('click', closeHandler, true);
       document.addEventListener('click', closeHandler, true);
+      if (shadowRoot && shadowRoot !== document) shadowRoot.addEventListener('click', closeHandler, true);
+      window._gpmContextMenuCleanup = cleanup;
     }, 10);
 
     return menu;
@@ -1395,7 +1402,7 @@ const GPMUI = (() => {
                       confirmText: t('restoreBackup'),
                       onConfirm: async () => {
                         await GPMBackupManager.restoreBackup(b.id);
-                        gpmRenderTree();
+                        if (typeof gpmRenderTree === 'function') gpmRenderTree();
                         overlay.remove();
                       },
                     });

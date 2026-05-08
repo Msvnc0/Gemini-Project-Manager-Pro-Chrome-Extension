@@ -16,7 +16,6 @@ const GPMSyncManager = (() => {
   const SYNC_INTERVAL = 30000; // 30 seconds
 
   let syncTimer = null;
-  let lastSyncTime = 0;
 
   async function getDeviceId() {
     let { gpm_deviceId } = await chrome.storage.local.get('gpm_deviceId');
@@ -112,7 +111,6 @@ const GPMSyncManager = (() => {
     try {
       const localMeta = await updateLocalMeta();
       await setSyncMeta(localMeta);
-      lastSyncTime = Date.now();
       gpmLog('[GPM Sync] Pushed local meta to sync storage');
       return true;
     } catch (e) {
@@ -123,6 +121,8 @@ const GPMSyncManager = (() => {
 
   async function startAutoSync() {
     if (syncTimer) return;
+
+    let lastVersion = await calculateDataVersion();
 
     syncTimer = setInterval(async () => {
       if (!gpmIsContextValid()) {
@@ -137,7 +137,11 @@ const GPMSyncManager = (() => {
           showConflictNotification(conflict);
         }
       } else {
-        await syncPush();
+        const currentVersion = await calculateDataVersion();
+        if (currentVersion !== lastVersion) {
+          await syncPush();
+          lastVersion = currentVersion;
+        }
       }
     }, SYNC_INTERVAL);
 

@@ -14,10 +14,13 @@ const GPMValidators = (() => {
 
   function sanitizeString(str, maxLength = MAX_STRING_LENGTH) {
     if (typeof str !== 'string') return '';
-    return str
-      .replace(/[^\w\s.,!?\-_():;'"\u00A1-\uFFFF]/g, '')
-      .slice(0, maxLength)
-      .trim();
+    return (
+      str
+        // eslint-disable-next-line no-control-regex
+        .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
+        .slice(0, maxLength)
+        .trim()
+    );
   }
 
   function sanitizeName(str) {
@@ -26,16 +29,6 @@ const GPMValidators = (() => {
 
   function sanitizeContent(str) {
     return sanitizeString(str, MAX_CONTENT_LENGTH);
-  }
-
-  function sanitizeHtml(str) {
-    if (typeof str !== 'string') return '';
-    return str
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
   }
 
   function sanitizeColor(color) {
@@ -215,7 +208,6 @@ const GPMValidators = (() => {
     sanitizeString,
     sanitizeName,
     sanitizeContent,
-    sanitizeHtml,
     sanitizeColor,
     sanitizeIcon,
     sanitizeId,

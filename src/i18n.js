@@ -2697,7 +2697,7 @@ const LANGUAGE_NAMES_IN = {
 };
 
 // RTL language codes
-const RTL_LANGS = ['ar', 'he', 'fa', 'ur'];
+const RTL_LANGS = ['ar'];
 
 let _gpmLang = 'en';
 

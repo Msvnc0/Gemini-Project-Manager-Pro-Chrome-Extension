@@ -81,6 +81,23 @@ const GPM_MIGRATIONS = [
     fromVersion: 4,
     toVersion: 5,
     migrate: (data) => {
+      const legacyKeys = [
+        'gpm_projects_backup',
+        'gpm_backup_ts',
+        'gpm_chatMap_backup',
+        'gpm_pre_import_projects',
+        'gpm_pre_import_chatMap',
+        'gpm_pre_import_quickPrompts',
+        'gpm_pre_import_ts',
+        'gpm_pre_migration_backup',
+        'gpm_update_backup',
+        'gpm_emergency_backup_before_reset',
+        'gpm_projects_pre_restore',
+        'gpm_tags',
+      ];
+      for (const key of legacyKeys) {
+        if (data[key] !== undefined) delete data[key];
+      }
       return data;
     },
   },

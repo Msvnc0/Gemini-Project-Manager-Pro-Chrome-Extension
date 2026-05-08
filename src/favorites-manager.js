@@ -20,7 +20,9 @@ const GPMFavoritesManager = (() => {
   async function saveFavorites(favorites) {
     try {
       await chrome.storage.local.set({ [FAVORITES_KEY]: favorites });
-    } catch (_) {}
+    } catch (e) {
+      if (typeof gpmError === 'function') gpmError('[GPM Favorites] Save failed:', e);
+    }
   }
 
   async function toggleFavorite(projectId) {
@@ -43,7 +45,6 @@ const GPMFavoritesManager = (() => {
   }
 
   return {
-    getFavorites,
     toggleFavorite,
     isFavorite,
   };

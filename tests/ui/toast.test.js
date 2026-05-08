@@ -66,10 +66,10 @@ describe('showToast', () => {
     const _t2 = window.showToast('second', 'info');
     const _t3 = window.showToast('third', 'info');
     const container = document.getElementById('gpm-toast-container');
-    expect(container.children.length).toBe(3);
+    expect(container.querySelectorAll('.gpm-toast').length).toBe(3);
 
     const t4 = window.showToast('fourth', 'info');
-    expect(container.children.length).toBe(3);
+    expect(container.querySelectorAll('.gpm-toast').length).toBe(3);
     expect(container.contains(t1)).toBe(false);
     expect(container.contains(t4)).toBe(true);
   });
