@@ -8,7 +8,7 @@
 const GPMKeyboardShortcuts = (() => {
   const SHORTCUTS = {
     'alt+n': { action: 'newFolder', description: 'Yeni klasör oluştur' },
-    'ctrl+f': { action: 'focusSearch', description: 'Arama alanına odaklan' },
+    'ctrl+shift+f': { action: 'focusSearch', description: 'Arama alanına odaklan' },
     'ctrl+shift+n': { action: 'newChat', description: 'Yeni sohbet başlat' },
     'ctrl+e': { action: 'editSelected', description: 'Seçili öğeyi düzenle' },
     delete: { action: 'deleteSelected', description: 'Seçili öğeyi sil' },

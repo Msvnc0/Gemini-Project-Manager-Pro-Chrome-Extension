@@ -735,14 +735,14 @@ function gpmCreateChatRow(chatId, mapping, project, allProjects) {
 //  CONTEXT MENUS (using Shadow DOM modal host)
 // ══════════════════════════════════════
 
-function gpmShowProjectContextMenu(x, y, project, allProjects) {
+async function gpmShowProjectContextMenu(x, y, project, allProjects) {
   gpmLog('Showing project context menu for:', project.name);
   if (!GPM_STATE.modalRoot) {
     gpmError('Modal root not initialized!');
     return;
   }
 
-  const isFavorite = typeof GPMFavoritesManager !== 'undefined' && GPMFavoritesManager.isFavorite(project.id);
+  const isFavorite = typeof GPMFavoritesManager !== 'undefined' && (await GPMFavoritesManager.isFavorite(project.id));
 
   GPMUI.showContextMenu(GPM_STATE.modalRoot, {
     x,

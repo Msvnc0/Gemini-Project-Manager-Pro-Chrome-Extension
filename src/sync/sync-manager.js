@@ -79,7 +79,8 @@ const GPMSyncManager = (() => {
     const chatCount = Object.keys(chatMap).length;
     const promptCount = prompts.length;
 
-    return `${projectCount}-${chatCount}-${promptCount}-${Date.now()}`;
+    const projectHash = projects.reduce((h, p) => h ^ (p.id.length + (p.chatIds || []).length), 0);
+    return `${projectCount}-${chatCount}-${promptCount}-${projectHash}`;
   }
 
   async function checkForConflicts() {

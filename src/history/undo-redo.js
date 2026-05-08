@@ -11,6 +11,10 @@ const GPMHistory = (() => {
   const redoStack = [];
 
   function push(action) {
+    if (!action || typeof action.undo !== 'function' || typeof action.redo !== 'function') {
+      gpmWarn('[GPM History] Invalid action pushed, ignoring:', action);
+      return;
+    }
     undoStack.push(action);
 
     if (undoStack.length > MAX_HISTORY) {
