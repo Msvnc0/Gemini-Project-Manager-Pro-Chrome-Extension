@@ -208,8 +208,6 @@ const GPMHistory = (() => {
     push,
     undo,
     redo,
-    canUndo,
-    canRedo,
     createAction,
   };
 })();

@@ -572,6 +572,5 @@ const GPMStorage = (() => {
     clearAll,
     getBackupInfo,
     restoreFromBackup,
-    _writeBackup,
   };
 })();

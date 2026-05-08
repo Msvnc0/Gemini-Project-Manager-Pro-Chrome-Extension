@@ -329,12 +329,5 @@ const GPMIntegrityCheck = (() => {
   }
   return {
     run,
-    findOrphanChatIds,
-    findOrphanedChatMapEntries,
-    findMissingParentRefs,
-    findCircularRefs,
-    findDuplicateChatIds,
-    autoFix,
-    attemptRecovery,
   };
 })();

@@ -564,15 +564,12 @@ function gpmPollCheck() {
       GPMStorage.assignChat(id, projectId).then(() => {
         gpmLog('Chat assigned successfully');
         gpmRenderTree();
-        setTimeout(() => {
-          if (gpmIsContextValid()) gpmScheduleAliasResolve();
-        }, 2000);
-        setTimeout(() => {
-          if (gpmIsContextValid()) gpmScheduleAliasResolve();
-        }, 5000);
-        setTimeout(() => {
-          if (gpmIsContextValid()) gpmScheduleAliasResolve();
-        }, 10000);
+        const aliasRetryDelays = [2000, 5000, 10000];
+        for (const delay of aliasRetryDelays) {
+          setTimeout(() => {
+            if (gpmIsContextValid()) gpmScheduleAliasResolve();
+          }, delay);
+        }
       });
     } else {
       gpmRenderTree();

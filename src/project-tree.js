@@ -70,10 +70,22 @@ function gpmHighlightText(text, query) {
   return frag;
 }
 
-function _gpmCountAllChats(proj, allProjs) {
+function _gpmBuildChildMap(allProjs) {
+  const map = new Map();
+  for (const p of allProjs) {
+    if (p.parentId) {
+      const children = map.get(p.parentId) || [];
+      children.push(p);
+      map.set(p.parentId, children);
+    }
+  }
+  return map;
+}
+
+function _gpmCountAllChats(proj, childMap) {
   const own = (proj.chatIds || []).length;
-  const kids = allProjs.filter((p) => p.parentId === proj.id);
-  return own + kids.reduce((sum, kid) => sum + _gpmCountAllChats(kid, allProjs), 0);
+  const kids = childMap.get(proj.id) || [];
+  return own + kids.reduce((sum, kid) => sum + _gpmCountAllChats(kid, childMap), 0);
 }
 
 // ══════════════════════════════════════
@@ -86,6 +98,7 @@ async function gpmRenderTree() {
   const projects = await GPMStorage.getProjects();
   const chatMap = await GPMStorage.getChatMap();
   const rootProjects = GPMStorage.getRootProjects(projects);
+  const _childMap = _gpmBuildChildMap(projects);
 
   // Schedule alias resolution separately (avoids render→save→render loop)
   gpmScheduleAliasResolve();
@@ -277,7 +290,7 @@ async function gpmRenderTree() {
   sortedRootProjects.forEach((project) => {
     if (searchQuery && !projectMatchesSearch(project, searchQuery).matches) return;
     matchCount++;
-    const row = gpmCreateProjectRow(project, projects, chatMap);
+    const row = gpmCreateProjectRow(project, projects, chatMap, _childMap);
     list.appendChild(row);
   });
 
@@ -342,7 +355,7 @@ async function gpmRenderTree() {
 //  CREATE PROJECT ROW (recursive)
 // ══════════════════════════════════════
 
-function gpmCreateProjectRow(project, allProjects, chatMap) {
+function gpmCreateProjectRow(project, allProjects, chatMap, childMap) {
   const frag = document.createDocumentFragment();
   const children = allProjects.filter((p) => p.parentId === project.id);
   const chatIds = project.chatIds || [];
@@ -372,7 +385,7 @@ function gpmCreateProjectRow(project, allProjects, chatMap) {
 
   const count = document.createElement('span');
   count.setAttribute('data-gpm', 'item-count');
-  const total = _gpmCountAllChats(project, allProjects);
+  const total = _gpmCountAllChats(project, childMap);
   count.textContent = total > 0 ? total : '';
 
   row.append(icon, label, count);
@@ -417,7 +430,7 @@ function gpmCreateProjectRow(project, allProjects, chatMap) {
 
     // Child projects FIRST (subfolders above chats)
     children.forEach((child) => {
-      const childRow = gpmCreateProjectRow(child, allProjects, chatMap);
+      const childRow = gpmCreateProjectRow(child, allProjects, chatMap, childMap);
       subList.appendChild(childRow);
     });
 
@@ -573,8 +586,9 @@ function gpmCreateProjectRow(project, allProjects, chatMap) {
       const cleanId = chatId.trim();
       const chatTitle = e.dataTransfer.getData('text/gpm-chat-title');
 
-      // 🛡️ Duplicate check - warn if chat already in another project
-      const duplicateInfo = GPMValidators.findDuplicateChat(cleanId, allProjects, chatMap);
+      const freshProjects = await GPMStorage.getProjects();
+      const freshChatMap = await GPMStorage.getChatMap();
+      const duplicateInfo = GPMValidators.findDuplicateChat(cleanId, freshProjects, freshChatMap);
       if (duplicateInfo && duplicateInfo.projectId !== project.id) {
         const confirmMove = await new Promise((resolve) => {
           GPMUI.showConfirmDialog(GPM_STATE.modalRoot, {

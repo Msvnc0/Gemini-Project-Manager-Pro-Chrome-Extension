@@ -44,7 +44,6 @@ const GPMFavoritesManager = (() => {
 
   return {
     getFavorites,
-    saveFavorites,
     toggleFavorite,
     isFavorite,
   };

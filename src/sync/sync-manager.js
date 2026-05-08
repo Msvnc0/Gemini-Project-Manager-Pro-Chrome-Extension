@@ -165,12 +165,6 @@ const GPMSyncManager = (() => {
   }
 
   return {
-    getDeviceId,
-    getLocalMeta,
-    getSyncMeta,
-    setSyncMeta,
-    checkForConflicts,
-    syncPush,
     startAutoSync,
     stopAutoSync,
   };

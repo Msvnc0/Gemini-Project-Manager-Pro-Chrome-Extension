@@ -24,7 +24,7 @@ Recommended order: `lint → format:check → test`
 
 ### Loading order (from manifest.json)
 
-1. `i18n.js` → `utils/uid.js` → `utils/validators.js` → `storage.js` → `selectors.js` → `ui_elements.js`
+1. `i18n.js` → `utils/validators.js` → `storage.js` → `selectors.js` → `ui_elements.js`
 2. `config.js` (depends on i18n, storage, selectors)
 3. Feature modules: `recovery/`, `backup/`, `sync/`, `templates/`, `keyboard/`, `history/`, `analytics/`
 4. `favorites-manager.js` → `ui/toast.js` → `project-tree.js` → `dom-injection.js` → `quick-prompts.js` → `navigation.js`
@@ -53,6 +53,7 @@ Recommended order: `lint → format:check → test`
 - Prettier: single quotes, trailing comma es5, 120 char width, 2-space tabs, semicolons, CRLF line endings
 - Prefix unused params/vars with `_` (eslint `no-unused-vars` ignores them)
 - Use `gpmLog`/`gpmWarn`/`gpmError` wrappers instead of raw `console.*` in `src/`
+- `background.js` is exempt from the `gpmLog` rule — it runs in the service worker context where the wrappers are not available
 - No `innerHTML` — use safe DOM methods (`createElement` + `textContent`)
 - `sourceType: 'script'` for src files; `sourceType: 'module'` for test files
 
