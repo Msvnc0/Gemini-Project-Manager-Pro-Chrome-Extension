@@ -61,11 +61,29 @@ function gpmTriggerNewChat() {
   for (const el of candidates) {
     const ariaLabel = (el.getAttribute('aria-label') || '').toLowerCase();
     const text = (el.textContent || '').trim().toLowerCase();
+    const newChatLabels = [
+      'new chat',
+      'yeni sohbet',
+      'neuer chat',
+      'nouvelle conversation',
+      'nueva conversación',
+      'nuova chat',
+      'novo chat',
+      'новый чат',
+      '新しいチャット',
+      '新建聊天',
+      '새 채팅',
+      'नई चैट',
+      'محادثة جديدة',
+      'cuộc trò chuyện mới',
+      'obrolan baru',
+      'แชทใหม่',
+      'নতুন চ্যাট',
+    ];
+    const textLower = text;
+    const ariaLower = ariaLabel;
     if (
-      text.includes('new chat') ||
-      text.includes('yeni sohbet') ||
-      ariaLabel.includes('new chat') ||
-      ariaLabel.includes('yeni sohbet')
+      newChatLabels.some((label) => textLower.includes(label) || ariaLower.includes(label))
     ) {
       gpmLog('Clicking "New chat" link');
       el.click();

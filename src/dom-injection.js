@@ -702,8 +702,12 @@ function gpmScheduleReinit(reason) {
 
     gpmResetState();
 
-    gpmInit().finally(() => {
-      _reinitInProgress = false;
-    });
+    gpmInit()
+      .catch((err) => {
+        gpmError('Re-initialization failed:', err);
+      })
+      .finally(() => {
+        _reinitInProgress = false;
+      });
   }, GPM_CONFIG.REINIT_DEBOUNCE);
 }

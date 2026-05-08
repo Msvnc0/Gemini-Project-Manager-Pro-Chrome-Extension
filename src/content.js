@@ -115,7 +115,11 @@ async function gpmInit() {
 
   gpmLog('Sidebar found:', sidebar.tagName, sidebar.className?.slice(0, 60));
 
-  await gpmWaitForSidebarContent(sidebar, GPM_CONFIG.CONTENT_TIMEOUT);
+  const contentReady = await gpmWaitForSidebarContent(sidebar, GPM_CONFIG.CONTENT_TIMEOUT);
+
+  if (!contentReady) {
+    gpmWarn('Sidebar content not ready after timeout, proceeding with empty sidebar');
+  }
 
   GPM_STATE.initialized = true;
   GPM_STATE.reinitFailCount = 0;

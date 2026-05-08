@@ -7,41 +7,65 @@
 
 const GPMUsageTracker = (() => {
   const ANALYTICS_KEY = 'gpm_analytics';
+  let _writeQueue = Promise.resolve();
+
+  function _withQueue(fn) {
+    const next = _writeQueue.then(fn).catch((e) => {
+      if (typeof gpmError === 'function') gpmError('[GPM Analytics] Queue error:', e);
+    });
+    _writeQueue = next;
+    return next;
+  }
 
   async function getAnalytics() {
-    const { [ANALYTICS_KEY]: analytics } = await chrome.storage.local.get(ANALYTICS_KEY);
-    return (
-      analytics || {
+    try {
+      const { [ANALYTICS_KEY]: analytics } = await chrome.storage.local.get(ANALYTICS_KEY);
+      return (
+        analytics || {
+          projectAccess: {},
+          featureUsage: {},
+          lastSession: null,
+          totalSessions: 0,
+        }
+      );
+    } catch (e) {
+      return {
         projectAccess: {},
         featureUsage: {},
         lastSession: null,
         totalSessions: 0,
-      }
-    );
+      };
+    }
   }
 
   async function saveAnalytics(analytics) {
-    await chrome.storage.local.set({ [ANALYTICS_KEY]: analytics });
+    try {
+      await chrome.storage.local.set({ [ANALYTICS_KEY]: analytics });
+    } catch (_) {}
   }
 
-  async function trackFeatureUsage(featureName) {
-    const analytics = await getAnalytics();
+  function trackFeatureUsage(featureName) {
+    return _withQueue(async () => {
+      const analytics = await getAnalytics();
 
-    if (!analytics.featureUsage[featureName]) {
-      analytics.featureUsage[featureName] = { count: 0, lastUsed: null };
-    }
+      if (!analytics.featureUsage[featureName]) {
+        analytics.featureUsage[featureName] = { count: 0, lastUsed: null };
+      }
 
-    analytics.featureUsage[featureName].count++;
-    analytics.featureUsage[featureName].lastUsed = Date.now();
+      analytics.featureUsage[featureName].count++;
+      analytics.featureUsage[featureName].lastUsed = Date.now();
 
-    await saveAnalytics(analytics);
+      await saveAnalytics(analytics);
+    });
   }
 
-  async function trackSession() {
-    const analytics = await getAnalytics();
-    analytics.lastSession = Date.now();
-    analytics.totalSessions = (analytics.totalSessions || 0) + 1;
-    await saveAnalytics(analytics);
+  function trackSession() {
+    return _withQueue(async () => {
+      const analytics = await getAnalytics();
+      analytics.lastSession = Date.now();
+      analytics.totalSessions = (analytics.totalSessions || 0) + 1;
+      await saveAnalytics(analytics);
+    });
   }
 
   return {

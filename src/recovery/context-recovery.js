@@ -15,6 +15,9 @@ const GPMContextRecovery = (() => {
         isInvalidated = true;
         showRecoveryUI();
       }
+      if (isValid && isInvalidated) {
+        isInvalidated = false;
+      }
     }, CHECK_INTERVAL_MS);
 
     gpmLog('Context recovery monitoring started');
