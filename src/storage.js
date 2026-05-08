@@ -83,7 +83,7 @@ const GPMStorage = (() => {
     let currentData = { ...data };
     for (let v = fromVersion + 1; v <= GPM_SCHEMA_VERSION; v++) {
       if (MIGRATIONS[v]) {
-        console.log(`[GPM Storage] Running migration v${v}`);
+        gpmLog('Running migration v' + v);
         currentData = MIGRATIONS[v](currentData);
       }
     }
@@ -105,7 +105,7 @@ const GPMStorage = (() => {
       }
 
       await chrome.storage.local.set(migratedData);
-      console.log(`[GPM Storage] Migrated from v${currentVersion} to ${GPM_SCHEMA_VERSION}`);
+      gpmLog('Migrated from v' + currentVersion + ' to ' + GPM_SCHEMA_VERSION);
     }
   }
 
@@ -138,7 +138,7 @@ const GPMStorage = (() => {
       }
     });
     _localLock = next.catch((err) => {
-      console.error('[GPM Storage] Lock chain error:', err);
+      gpmError('Lock chain error:', err);
       return Promise.resolve();
     });
     return next;
@@ -186,7 +186,7 @@ const GPMStorage = (() => {
   async function _writeBackup(type, data) {
     const usage = await _checkQuota();
     if (usage > GPM_STORAGE_QUOTA_WARN) {
-      console.log('[GPM Storage] Quota usage', Math.round(usage * 100) + '%, skipping backup');
+      gpmLog('Quota usage', Math.round(usage * 100) + '%, skipping backup');
       return;
     }
     await chrome.storage.local.set({
@@ -540,8 +540,7 @@ const GPMStorage = (() => {
         gpm_settings: d.settings && typeof d.settings === 'object' ? d.settings : { lang: 'en', theme: 'auto' },
       });
 
-      if (typeof console !== 'undefined' && console.log)
-        console.log('[GPM] Restored from backup (type:', backup.type, ')');
+      gpmLog('Restored from backup (type:', backup.type, ')');
       return true;
     });
   }

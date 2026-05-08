@@ -1,7 +1,7 @@
 /**
  * config.js — Shared Configuration, State, and Utilities
  *
- * This module is loaded FIRST (after i18n.js, storage.js, selectors.js, ui_elements.js)
+ * This module is loaded after i18n.js, validators.js, storage.js, selectors.js, ui_elements.js
  * and provides shared globals used by all other GPM modules.
  *
  * Exports (global):
@@ -71,6 +71,7 @@ const GPM_STATE = {
   _lastSidebarChatCount: 0,
   _sidebarStabilizeTimer: null,
   _renderId: 0,
+  spaObserversActive: false,
 };
 
 /**

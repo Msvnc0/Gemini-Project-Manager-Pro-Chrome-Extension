@@ -180,31 +180,31 @@ async function gpmRunMigrations(currentVersion) {
 }
 
 chrome.runtime.onInstalled.addListener(async (details) => {
-  if (details.reason === 'install') {
-    // Fresh install — set defaults with current schema version
-    await chrome.storage.local.set({
-      gpm_projects: [],
-      gpm_chatMap: {},
-      gpm_quickPrompts: [],
-      gpm_settings: { lang: 'en', theme: 'auto' },
-      gpm_schemaVersion: CURRENT_SCHEMA_VERSION,
-    });
-    console.log('[GPM] Initialized default storage (schema v' + CURRENT_SCHEMA_VERSION + ').');
-  } else if (details.reason === 'update') {
-    // 🛡️ Pre-update backup
-    await createUpdateBackup(details.previousVersion);
+  try {
+    if (details.reason === 'install') {
+      await chrome.storage.local.set({
+        gpm_projects: [],
+        gpm_chatMap: {},
+        gpm_quickPrompts: [],
+        gpm_settings: { lang: 'en', theme: 'auto' },
+        gpm_schemaVersion: CURRENT_SCHEMA_VERSION,
+      });
+      console.log('[GPM] Initialized default storage (schema v' + CURRENT_SCHEMA_VERSION + ').');
+    } else if (details.reason === 'update') {
+      await createUpdateBackup(details.previousVersion);
 
-    // Extension updated — check if schema migration is needed
-    const result = await chrome.storage.local.get('gpm_schemaVersion');
-    const storedVersion = result.gpm_schemaVersion || 0; // 0 = pre-versioning installs
-    if (storedVersion < CURRENT_SCHEMA_VERSION) {
-      await gpmRunMigrations(storedVersion);
-    } else {
-      console.log('[GPM] Schema up to date (v' + storedVersion + ').');
+      const result = await chrome.storage.local.get('gpm_schemaVersion');
+      const storedVersion = result.gpm_schemaVersion || 0;
+      if (storedVersion < CURRENT_SCHEMA_VERSION) {
+        await gpmRunMigrations(storedVersion);
+      } else {
+        console.log('[GPM] Schema up to date (v' + storedVersion + ').');
+      }
+
+      await notifyTabsAboutUpdate();
     }
-
-    // 🛡️ Notify all Gemini tabs about the update
-    await notifyTabsAboutUpdate();
+  } catch (e) {
+    console.error('[GPM] onInstalled handler failed:', e);
   }
 });
 
@@ -264,6 +264,7 @@ let _writeLockHolder = null;
 let _writeLockTimer = null;
 
 function gpmAcquireWriteLock(tabId) {
+  if (typeof tabId !== 'number') return false;
   if (_writeLockHolder !== null && _writeLockHolder !== tabId) {
     return false;
   }
@@ -292,12 +293,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'GPM_RELEASE_LOCK') {
     const tabId = sender.tab?.id;
     gpmReleaseWriteLock(tabId);
-    sendResponse({ ok: true });
-    return;
-  }
-
-  if (message.type === 'GPM_STORAGE_UPDATED') {
-    gpmReleaseWriteLock(sender.tab?.id);
     sendResponse({ ok: true });
     return;
   }

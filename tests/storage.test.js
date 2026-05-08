@@ -26,6 +26,10 @@ globalThis.generateUid = function () {
   return `${timestamp}-${random1}-${random2}`;
 };
 
+globalThis.gpmLog = (..._args) => {};
+globalThis.gpmWarn = (..._args) => {};
+globalThis.gpmError = (..._args) => {};
+
 // Load and execute storage.js
 const storageCode = readFileSync(resolve('src/storage.js'), 'utf-8');
 const patchedCode = storageCode.replace(/^const GPMStorage\s*=/m, 'globalThis.GPMStorage =');

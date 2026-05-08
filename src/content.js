@@ -32,14 +32,14 @@ function gpmResetObserversFlag() {
 async function gpmInit() {
   if (GPM_STATE.initialized) return;
 
-  console.log('[GPM] gpmInit() started - v2.0.0');
+  gpmLog('gpmInit() started - v2.0.0');
 
   // ── Step 1: Storage initialization & schema migration ──
   try {
     await GPMStorage.initializeStorage();
-    console.log('[GPM] Storage initialized');
+    gpmLog('Storage initialized');
   } catch (e) {
-    console.error('[GPM] Storage initialization failed:', e);
+    gpmError('Storage initialization failed:', e);
   }
 
   // ── Step 2: Load settings & set language ──
@@ -56,17 +56,17 @@ async function gpmInit() {
   try {
     const integrityResult = await GPMIntegrityCheck.run();
     if (integrityResult.issues && integrityResult.issues.length > 0) {
-      console.log('[GPM] Integrity check found issues:', integrityResult.issues.length);
+      gpmLog('Integrity check found issues:', integrityResult.issues.length);
     }
   } catch (e) {
-    console.warn('[GPM] Integrity check failed:', e);
+    gpmWarn('Integrity check failed:', e);
   }
 
   // ── Step 4: Start context recovery monitoring ──
   try {
     GPMContextRecovery.startMonitoring();
   } catch (e) {
-    console.warn('[GPM] Context recovery monitoring failed:', e);
+    gpmWarn('Context recovery monitoring failed:', e);
   }
 
   // ── Step 5: Initialize keyboard shortcuts ──
@@ -75,7 +75,7 @@ async function gpmInit() {
       GPMKeyboardShortcuts.init();
     }
   } catch (e) {
-    console.warn('[GPM] Keyboard shortcuts init failed:', e);
+    gpmWarn('Keyboard shortcuts init failed:', e);
   }
 
   // ── Step 6: Track session ──
@@ -84,7 +84,7 @@ async function gpmInit() {
       await GPMUsageTracker.trackSession();
     }
   } catch (e) {
-    console.warn('[GPM] Session tracking failed:', e);
+    gpmWarn('Session tracking failed:', e);
   }
 
   // ── Step 7: Auto backup check ──
@@ -93,16 +93,16 @@ async function gpmInit() {
       await GPMBackupManager.autoBackupIfNeeded();
     }
   } catch (e) {
-    console.warn('[GPM] Auto backup failed:', e);
+    gpmWarn('Auto backup failed:', e);
   }
 
   // ── Step 8: Inject Quick Prompt trigger EARLY ──
-  console.log('[GPM] Early QP injection attempt');
+  gpmLog('Early QP injection attempt');
   try {
     gpmInjectQuickPromptTrigger();
     gpmObserveQuickPromptButton();
   } catch (e) {
-    console.error('[GPM] Early QP injection error:', e);
+    gpmError('Early QP injection error:', e);
   }
 
   // ── Step 9: Wait for sidebar ──
@@ -148,10 +148,10 @@ async function gpmInit() {
       await GPMSyncManager.startAutoSync();
     }
   } catch (e) {
-    console.warn('[GPM] Sync monitoring failed:', e);
+    gpmWarn('Sync monitoring failed:', e);
   }
 
-  console.log('[GPM] Initialization complete');
+  gpmLog('Initialization complete');
 }
 
 // ══════════════════════════════════════
@@ -176,7 +176,7 @@ try {
     }
 
     if (msg.type === 'GPM_EXTENSION_UPDATED') {
-      console.log('[GPM] Extension updated to v' + msg.newVersion);
+      gpmLog('Extension updated to v' + msg.newVersion);
       GPMContextRecovery.showRecoveryUI();
     }
   });
@@ -198,7 +198,7 @@ try {
       if ('gpm_lastExtensionUpdate' in changes) {
         const updateInfo = changes.gpm_lastExtensionUpdate?.newValue;
         if (updateInfo?.version === chrome.runtime.getManifest().version) {
-          console.log('[GPM] Extension updated to v' + updateInfo.version);
+          gpmLog('Extension updated to v' + updateInfo.version);
           GPMContextRecovery.showRecoveryUI();
         }
       }
