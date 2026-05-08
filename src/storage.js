@@ -223,12 +223,14 @@ const GPMStorage = (() => {
   }
 
   async function saveProjects(projects) {
-    const current = await _get('gpm_projects');
-    const chatMap = await _get('gpm_chatMap');
-    if (current && Array.isArray(current) && current.length > 0) {
-      await _writeBackup('auto', { projects: current, chatMap: chatMap });
-    }
-    await _set('gpm_projects', projects);
+    return _withLock(async () => {
+      const current = await _get('gpm_projects');
+      const chatMap = await _get('gpm_chatMap');
+      if (current && Array.isArray(current) && current.length > 0) {
+        await _writeBackup('auto', { projects: current, chatMap: chatMap });
+      }
+      await _set('gpm_projects', projects);
+    });
   }
 
   async function createProject({ name, icon = '📁', color = '#8ab4f8', parentId = null }) {
@@ -247,12 +249,14 @@ const GPMStorage = (() => {
   }
 
   async function updateProject(id, updates) {
-    const projects = await getProjects();
-    const idx = projects.findIndex((p) => p.id === id);
-    if (idx === -1) return null;
-    Object.assign(projects[idx], updates);
-    await saveProjects(projects);
-    return projects[idx];
+    return _withLock(async () => {
+      const projects = await getProjects();
+      const idx = projects.findIndex((p) => p.id === id);
+      if (idx === -1) return null;
+      Object.assign(projects[idx], updates);
+      await _set('gpm_projects', projects);
+      return projects[idx];
+    });
   }
 
   async function deleteProject(id) {
@@ -298,12 +302,14 @@ const GPMStorage = (() => {
   }
 
   async function saveChatMap(map) {
-    const current = await _get('gpm_chatMap');
-    const projects = await _get('gpm_projects');
-    if (current && Object.keys(current).length > 0) {
-      await _writeBackup('auto', { projects: projects, chatMap: current });
-    }
-    await _set('gpm_chatMap', map);
+    return _withLock(async () => {
+      const current = await _get('gpm_chatMap');
+      const projects = await _get('gpm_projects');
+      if (current && Object.keys(current).length > 0) {
+        await _writeBackup('auto', { projects: projects, chatMap: current });
+      }
+      await _set('gpm_chatMap', map);
+    });
   }
 
   async function assignChat(chatId, projectId) {
@@ -349,22 +355,26 @@ const GPMStorage = (() => {
   }
 
   async function setChatAlias(chatId, alias) {
-    const chatMap = await getChatMap();
-    if (chatMap[chatId]) {
-      chatMap[chatId].alias = alias;
-      chatMap[chatId]._autoResolved = false;
-      await saveChatMap(chatMap);
-    }
+    return _withLock(async () => {
+      const chatMap = await getChatMap();
+      if (chatMap[chatId]) {
+        chatMap[chatId].alias = alias;
+        chatMap[chatId]._autoResolved = false;
+        await _set('gpm_chatMap', chatMap);
+      }
+    });
   }
 
   async function togglePinChat(chatId) {
-    const chatMap = await getChatMap();
-    if (chatMap[chatId]) {
-      chatMap[chatId].pinned = !chatMap[chatId].pinned;
-      await saveChatMap(chatMap);
-      return chatMap[chatId].pinned;
-    }
-    return false;
+    return _withLock(async () => {
+      const chatMap = await getChatMap();
+      if (chatMap[chatId]) {
+        chatMap[chatId].pinned = !chatMap[chatId].pinned;
+        await _set('gpm_chatMap', chatMap);
+        return chatMap[chatId].pinned;
+      }
+      return false;
+    });
   }
 
   async function getQuickPrompts() {
@@ -391,11 +401,13 @@ const GPMStorage = (() => {
   }
 
   async function toggleStarChat(chatId) {
-    const chatMap = await getChatMap();
-    if (!chatMap[chatId]) return null;
-    chatMap[chatId].starredAt = chatMap[chatId].starredAt ? null : Date.now();
-    await saveChatMap(chatMap);
-    return chatMap[chatId].starredAt;
+    return _withLock(async () => {
+      const chatMap = await getChatMap();
+      if (!chatMap[chatId]) return null;
+      chatMap[chatId].starredAt = chatMap[chatId].starredAt ? null : Date.now();
+      await _set('gpm_chatMap', chatMap);
+      return chatMap[chatId].starredAt;
+    });
   }
 
   async function getStarredChats() {
@@ -476,11 +488,13 @@ const GPMStorage = (() => {
   }
 
   async function clearAll() {
-    await chrome.storage.local.set({
-      gpm_projects: [],
-      gpm_chatMap: {},
-      gpm_quickPrompts: [],
-      gpm_settings: { lang: 'en', theme: 'auto' },
+    return _withLock(async () => {
+      await chrome.storage.local.set({
+        gpm_projects: [],
+        gpm_chatMap: {},
+        gpm_quickPrompts: [],
+        gpm_settings: { lang: 'en', theme: 'auto' },
+      });
     });
   }
 
