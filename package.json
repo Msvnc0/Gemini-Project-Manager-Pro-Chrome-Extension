@@ -1,6 +1,6 @@
 {
   "name": "gemini-project-manager-pro",
-  "version": "1.1.0",
+  "version": "1.2.8",
   "private": true,
   "description": "Chrome extension for organizing Gemini AI chats into projects",
   "type": "module",

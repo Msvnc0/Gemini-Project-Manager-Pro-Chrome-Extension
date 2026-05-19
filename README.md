@@ -136,6 +136,29 @@ All data is stored locally in your browser. No data is sent to external servers.
 
 ## Changelog
 
+### v1.2.8 — Gemini UI Compatibility & Health Scan
+
+🔧 **Gemini New UI Compatibility:**
+
+- Fixed Projects section appearing in the wrong place (top bar instead of left sidebar) on Gemini's redesigned layout
+- Sidebar is now discovered by climbing up from chat links instead of relying on fragile CSS selectors
+- Quick Prompt button no longer flickers — added fast-path cache, stale insertRef guard, and floating button idempotency
+- Reduced initialization latency by parallelizing storage, sidebar wait, and non-blocking setup steps
+
+🛡️ **Health Scan & Stability:**
+
+- Fixed critical `gpmInit` deadlock: `_initializing` flag is now guaranteed to clear via `try/finally`, preventing permanent init lock after any error
+- Cross-tab write lock (`_withLock`) now skips execution instead of running unlocked when lock cannot be acquired
+- Added `createdAt`/`updatedAt` timestamps to all newly created/updated projects
+- Timer leak fixes: `gpmCleanupObservers` now clears `_deletionCheckTimer` and `_sidebarStabilizeTimer`
+- Auto-assign promise (`GPMStorage.assignChat`) now has `.catch` to prevent unhandled rejections
+- Sidebar observer resilience: if `gpmInit` throws inside observer, it re-attaches itself for retry
+
+🧹 **Code Quality:**
+
+- Lint: 88 warnings → 0 (dead globals removed, `var`→`let/const`, unused params prefixed)
+- ESLint globals cleaned up: removed `_gpmIsValidSidebar`, `GPM_LANG`, `showToast`, `gpmFindInsertionPoint`; added `gpmStopHealthMonitor`, `gpmObserveForSidebar`
+
 ### v1.2.7 — Stability & Reliability Update
 
 🐛 False Deletion Fix:
