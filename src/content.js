@@ -36,120 +36,146 @@ async function gpmInit() {
 
   GPM_STATE._initializing = true;
 
-  gpmLog(
-    'gpmInit() started - v' +
-      (typeof chrome !== 'undefined' && chrome.runtime?.getManifest ? chrome.runtime.getManifest().version : 'dev')
-  );
-
-  // ── Start sidebar wait immediately (usually the longest pole) ──
-  const sidebarPromise = gpmWaitForSidebar(GPM_CONFIG.SIDEBAR_TIMEOUT);
-
-  // ── Storage + settings (needed before tree render) ──
   try {
-    await GPMStorage.initializeStorage();
-    gpmLog('Storage initialized');
-  } catch (e) {
-    gpmError('Storage initialization failed:', e);
-  }
+    gpmLog(
+      'gpmInit() started - v' +
+        (typeof chrome !== 'undefined' && chrome.runtime?.getManifest ? chrome.runtime.getManifest().version : 'dev')
+    );
 
-  const settings = await GPMStorage.getSettings();
-  if (settings.lang) {
-    gpmSetLang(settings.lang);
-  } else {
-    const detectedLang = detectBrowserLanguage();
-    gpmSetLang(detectedLang);
-    await GPMStorage.saveSettings({ ...settings, lang: detectedLang });
-  }
+    // ── Start sidebar wait immediately (usually the longest pole) ──
+    const sidebarPromise = gpmWaitForSidebar(GPM_CONFIG.SIDEBAR_TIMEOUT);
 
-  // ── Fire-and-forget: everything that does NOT block injection ──
-  Promise.resolve()
-    .then(() => GPMIntegrityCheck.run())
-    .then((integrityResult) => {
-      if (integrityResult.issues && integrityResult.issues.length > 0) {
-        gpmLog('Integrity check found issues:', integrityResult.issues.length);
-      }
-    })
-    .catch((e) => gpmWarn('Integrity check failed:', e));
-
-  Promise.resolve()
-    .then(() => GPMContextRecovery.startMonitoring())
-    .catch((e) => gpmWarn('Context recovery monitoring failed:', e));
-
-  Promise.resolve()
-    .then(() => {
-      if (typeof GPMKeyboardShortcuts !== 'undefined') GPMKeyboardShortcuts.init();
-    })
-    .catch((e) => gpmWarn('Keyboard shortcuts init failed:', e));
-
-  Promise.resolve()
-    .then(() => {
-      if (typeof GPMUsageTracker !== 'undefined') return GPMUsageTracker.trackSession();
-    })
-    .catch((e) => gpmWarn('Session tracking failed:', e));
-
-  Promise.resolve()
-    .then(() => {
-      if (typeof GPMBackupManager !== 'undefined') return GPMBackupManager.autoBackupIfNeeded();
-    })
-    .catch((e) => gpmWarn('Auto backup failed:', e));
-
-  // ── Step 8: Inject Quick Prompt trigger EARLY ──
-  gpmLog('Early QP injection attempt');
-  try {
-    gpmInjectQuickPromptTrigger();
-    gpmObserveQuickPromptButton();
-  } catch (e) {
-    gpmError('Early QP injection error:', e);
-  }
-
-  // ── Step 9: Wait only for sidebar (already kicked off at top) ──
-  const sidebar = await sidebarPromise;
-  if (!sidebar) {
-    gpmWarn('Sidebar not found. Retrying...');
-    gpmObserveForSidebar();
-    GPM_STATE._initializing = false;
-    return;
-  }
-
-  gpmLog('Sidebar found:', sidebar.tagName, sidebar.className?.slice(0, 60));
-
-  const contentReady = await gpmWaitForSidebarContent(sidebar, GPM_CONFIG.CONTENT_TIMEOUT);
-  if (!contentReady) {
-    gpmWarn('Sidebar content not ready after timeout, proceeding with empty sidebar');
-  }
-
-  GPM_STATE.initialized = true;
-  GPM_STATE._initializing = false;
-  GPM_STATE.reinitFailCount = 0;
-  gpmLog('Sidebar content ready. Injecting all modules.');
-
-  // ── Step 10: Initialize DOM injection modules ──
-  gpmInjectStyles();
-  gpmInjectProjectSection();
-  gpmCreateModalHost();
-  gpmInjectQuickPromptTrigger();
-  gpmObserveQuickPromptButton();
-
-  // ── Step 11: Start SPA observers (once only) ──
-  if (!_spaObserversActive) {
-    _spaObserversActive = true;
-    gpmObserveSPANavigation();
-    gpmObserveNewChats();
-  }
-
-  // ── Step 12: Start DOM health monitor ──
-  gpmStartHealthMonitor();
-
-  // ── Step 13: Start sync monitoring ──
-  try {
-    if (typeof GPMSyncManager !== 'undefined') {
-      await GPMSyncManager.startAutoSync();
+    // ── Storage + settings (needed before tree render) ──
+    try {
+      await GPMStorage.initializeStorage();
+      gpmLog('Storage initialized');
+    } catch (e) {
+      gpmError('Storage initialization failed:', e);
     }
-  } catch (e) {
-    gpmWarn('Sync monitoring failed:', e);
-  }
 
-  gpmLog('Initialization complete');
+    try {
+      const settings = await GPMStorage.getSettings();
+      if (settings.lang) {
+        gpmSetLang(settings.lang);
+      } else {
+        const detectedLang = detectBrowserLanguage();
+        gpmSetLang(detectedLang);
+        await GPMStorage.saveSettings({ ...settings, lang: detectedLang });
+      }
+    } catch (e) {
+      gpmWarn('Settings init failed:', e);
+    }
+
+    // ── Fire-and-forget: everything that does NOT block injection ──
+    Promise.resolve()
+      .then(() => GPMIntegrityCheck.run())
+      .then((integrityResult) => {
+        if (integrityResult.issues && integrityResult.issues.length > 0) {
+          gpmLog('Integrity check found issues:', integrityResult.issues.length);
+        }
+      })
+      .catch((e) => gpmWarn('Integrity check failed:', e));
+
+    Promise.resolve()
+      .then(() => GPMContextRecovery.startMonitoring())
+      .catch((e) => gpmWarn('Context recovery monitoring failed:', e));
+
+    Promise.resolve()
+      .then(() => {
+        if (typeof GPMKeyboardShortcuts !== 'undefined') GPMKeyboardShortcuts.init();
+      })
+      .catch((e) => gpmWarn('Keyboard shortcuts init failed:', e));
+
+    Promise.resolve()
+      .then(() => {
+        if (typeof GPMUsageTracker !== 'undefined') return GPMUsageTracker.trackSession();
+      })
+      .catch((e) => gpmWarn('Session tracking failed:', e));
+
+    Promise.resolve()
+      .then(() => {
+        if (typeof GPMBackupManager !== 'undefined') return GPMBackupManager.autoBackupIfNeeded();
+      })
+      .catch((e) => gpmWarn('Auto backup failed:', e));
+
+    // ── Step 8: Inject Quick Prompt trigger EARLY ──
+    gpmLog('Early QP injection attempt');
+    try {
+      gpmInjectQuickPromptTrigger();
+      gpmObserveQuickPromptButton();
+    } catch (e) {
+      gpmError('Early QP injection error:', e);
+    }
+
+    // ── Step 9: Wait only for sidebar (already kicked off at top) ──
+    const sidebar = await sidebarPromise;
+    if (!sidebar) {
+      gpmWarn('Sidebar not found. Retrying...');
+      gpmObserveForSidebar();
+      return;
+    }
+
+    gpmLog('Sidebar found:', sidebar.tagName, sidebar.className?.slice(0, 60));
+
+    const contentReady = await gpmWaitForSidebarContent(sidebar, GPM_CONFIG.CONTENT_TIMEOUT);
+    if (!contentReady) {
+      gpmWarn('Sidebar content not ready after timeout, proceeding with empty sidebar');
+    }
+
+    GPM_STATE.initialized = true;
+    GPM_STATE.reinitFailCount = 0;
+    gpmLog('Sidebar content ready. Injecting all modules.');
+
+    // ── Step 10: Initialize DOM injection modules ──
+    try {
+      gpmInjectStyles();
+    } catch (e) {
+      gpmWarn('Style injection failed:', e);
+    }
+    try {
+      gpmInjectProjectSection();
+    } catch (e) {
+      gpmWarn('Project section injection failed:', e);
+    }
+    try {
+      gpmCreateModalHost();
+    } catch (e) {
+      gpmWarn('Modal host injection failed:', e);
+    }
+    try {
+      gpmInjectQuickPromptTrigger();
+    } catch (e) {
+      gpmWarn('QP injection failed:', e);
+    }
+    try {
+      gpmObserveQuickPromptButton();
+    } catch (e) {
+      gpmWarn('QP observer failed:', e);
+    }
+
+    // ── Step 11: Start SPA observers (once only) ──
+    if (!_spaObserversActive) {
+      _spaObserversActive = true;
+      gpmObserveSPANavigation();
+      gpmObserveNewChats();
+    }
+
+    // ── Step 12: Start DOM health monitor ──
+    gpmStartHealthMonitor();
+
+    // ── Step 13: Start sync monitoring ──
+    try {
+      if (typeof GPMSyncManager !== 'undefined') {
+        await GPMSyncManager.startAutoSync();
+      }
+    } catch (e) {
+      gpmWarn('Sync monitoring failed:', e);
+    }
+
+    gpmLog('Initialization complete');
+  } finally {
+    GPM_STATE._initializing = false;
+  }
 }
 
 // ══════════════════════════════════════
@@ -166,7 +192,7 @@ function gpmScheduleSyncRender() {
 }
 
 try {
-  chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  chrome.runtime.onMessage.addListener((msg, _sender, _sendResponse) => {
     if (!gpmIsContextValid()) return;
 
     if (msg.type === 'GPM_SYNC') {

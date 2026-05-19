@@ -670,8 +670,8 @@ async function gpmToggleQuickPrompts() {
       fileInput.type = 'file';
       fileInput.accept = '.json';
       fileInput.style.display = 'none';
-      var cleaned = false;
-      var cleanup = function () {
+      let cleaned = false;
+      const cleanup = function () {
         if (cleaned) return;
         cleaned = true;
         fileInput.remove();
@@ -718,7 +718,7 @@ async function gpmToggleQuickPrompts() {
         reader.readAsText(file);
         cleanup();
       });
-      var cancelTimeout = setTimeout(cleanup, 60000);
+      const cancelTimeout = setTimeout(cleanup, 60000);
       fileInput.addEventListener('cancel', function () {
         clearTimeout(cancelTimeout);
         cleanup();

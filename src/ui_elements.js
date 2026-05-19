@@ -483,12 +483,12 @@ const GPMUI = (() => {
 
     const menu = el('div', { className: 'gpm-context-menu', role: 'menu', style: { left: x + 'px', top: y + 'px' } });
 
-    var closeHandler = function (e) {
+    const closeHandler = function (e) {
       if (menu.contains(e.target)) return;
       cleanup();
     };
 
-    var cleanup = function () {
+    const cleanup = function () {
       menu.remove();
       document.removeEventListener('click', closeHandler, true);
       if (shadowRoot && shadowRoot !== document) shadowRoot.removeEventListener('click', closeHandler, true);

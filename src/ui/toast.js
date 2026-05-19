@@ -51,12 +51,12 @@
   `;
 
   function getContainer() {
-    var root = typeof GPM_STATE !== 'undefined' && GPM_STATE.modalRoot ? GPM_STATE.modalRoot : document.body;
-    var container = root.querySelector('#gpm-toast-container');
+    const root = typeof GPM_STATE !== 'undefined' && GPM_STATE.modalRoot ? GPM_STATE.modalRoot : document.body;
+    let container = root.querySelector('#gpm-toast-container');
     if (!container) {
       container = document.createElement('div');
       container.id = 'gpm-toast-container';
-      var style = document.createElement('style');
+      const style = document.createElement('style');
       style.textContent = TOAST_STYLES;
       container.appendChild(style);
       root.appendChild(container);
@@ -67,26 +67,26 @@
   function showToast(message, type, options) {
     type = type || 'info';
     options = options || {};
-    var container = getContainer();
-    var duration = options.duration != null ? options.duration : DEFAULT_DURATIONS[type] || 3000;
+    const container = getContainer();
+    const duration = options.duration != null ? options.duration : DEFAULT_DURATIONS[type] || 3000;
 
     while (container.querySelectorAll('.gpm-toast').length >= MAX_TOASTS) {
-      var oldest = container.querySelector('.gpm-toast');
+      const oldest = container.querySelector('.gpm-toast');
       if (oldest) {
         clearTimeout(oldest._gpmTimerId);
         oldest.remove();
       }
     }
 
-    var toast = document.createElement('div');
+    const toast = document.createElement('div');
     toast.className = 'gpm-toast gpm-toast-' + type;
-    var msgSpan = document.createElement('span');
+    const msgSpan = document.createElement('span');
     msgSpan.className = 'gpm-toast-message';
     msgSpan.textContent = message;
     toast.appendChild(msgSpan);
 
     if (options.undoAction) {
-      var undoBtn = document.createElement('button');
+      const undoBtn = document.createElement('button');
       undoBtn.className = 'gpm-toast-undo';
       undoBtn.textContent = typeof t === 'function' ? t('undo') || 'Undo' : 'Undo';
       undoBtn.addEventListener('click', function () {
@@ -97,7 +97,7 @@
     }
 
     container.appendChild(toast);
-    var timerId = setTimeout(function () {
+    const timerId = setTimeout(function () {
       dismissToast(toast);
     }, duration);
     toast._gpmTimerId = timerId;

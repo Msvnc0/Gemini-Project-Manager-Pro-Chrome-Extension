@@ -193,6 +193,8 @@ function gpmCleanupObservers() {
     document.removeEventListener('visibilitychange', _visibilityHandler);
     _visibilityHandler = null;
   }
+  clearTimeout(GPM_STATE._deletionCheckTimer);
+  clearInterval(GPM_STATE._sidebarStabilizeTimer);
   _pollLastChatId = null;
   _pollLastUrl = null;
 }
@@ -558,16 +560,18 @@ function gpmPollCheck() {
       const { projectId } = GPM_STATE.pendingChatAssignment;
       GPM_STATE.pendingChatAssignment = null;
       gpmLog('Auto-assigning chat', id, 'to project:', projectId);
-      GPMStorage.assignChat(id, projectId).then(() => {
-        gpmLog('Chat assigned successfully');
-        gpmRenderTree();
-        const aliasRetryDelays = [2000, 5000, 10000];
-        for (const delay of aliasRetryDelays) {
-          setTimeout(() => {
-            if (gpmIsContextValid()) gpmScheduleAliasResolve();
-          }, delay);
-        }
-      });
+      GPMStorage.assignChat(id, projectId)
+        .then(() => {
+          gpmLog('Chat assigned successfully');
+          gpmRenderTree();
+          const aliasRetryDelays = [2000, 5000, 10000];
+          for (const delay of aliasRetryDelays) {
+            setTimeout(() => {
+              if (gpmIsContextValid()) gpmScheduleAliasResolve();
+            }, delay);
+          }
+        })
+        .catch((err) => gpmError('Auto-assign failed:', err));
     } else {
       gpmRenderTree();
     }

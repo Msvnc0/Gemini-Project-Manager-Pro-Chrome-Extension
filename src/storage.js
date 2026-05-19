@@ -131,6 +131,10 @@ const GPMStorage = (() => {
   function _withLock(fn) {
     const next = _localLock.then(async () => {
       const locked = await _acquireCrossTabLock();
+      if (!locked) {
+        gpmWarn('Cross-tab lock could not be acquired, skipping write operation');
+        return;
+      }
       try {
         return await fn();
       } finally {
@@ -252,7 +256,19 @@ const GPMStorage = (() => {
     return _withLock(async () => {
       const projects = await getProjects();
       const id = generateUid();
-      const project = { id, name, icon, color, parentId, children: [], chatIds: [], collapsed: false };
+      const now = Date.now();
+      const project = {
+        id,
+        name,
+        icon,
+        color,
+        parentId,
+        children: [],
+        chatIds: [],
+        collapsed: false,
+        createdAt: now,
+        updatedAt: now,
+      };
       projects.push(project);
 
       if (parentId) {
@@ -270,7 +286,7 @@ const GPMStorage = (() => {
       const projects = await getProjects();
       const idx = projects.findIndex((p) => p.id === id);
       if (idx === -1) return null;
-      Object.assign(projects[idx], updates);
+      Object.assign(projects[idx], updates, { updatedAt: Date.now() });
       await _set('gpm_projects', projects);
       return projects[idx];
     });

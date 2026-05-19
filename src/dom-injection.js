@@ -604,7 +604,13 @@ function gpmObserveForSidebar() {
     if (sidebar && !GPM_STATE.initialized) {
       _sidebarPresenceObserver.disconnect();
       _sidebarPresenceObserver = null;
-      gpmInit();
+      try {
+        gpmInit();
+      } catch (e) {
+        gpmWarn('Sidebar observer gpmInit() failed:', e);
+        // Re-attach observer so we can retry later
+        gpmObserveForSidebar();
+      }
     }
   });
   _sidebarPresenceObserver.observe(document.body, { childList: true, subtree: true });

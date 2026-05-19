@@ -58,10 +58,10 @@ const GPMKeyboardShortcuts = (() => {
     },
 
     closeModal: function () {
-      var overlays = document.querySelectorAll('.gpm-overlay');
-      var overlay = overlays[overlays.length - 1];
+      const overlays = document.querySelectorAll('.gpm-overlay');
+      const overlay = overlays[overlays.length - 1];
       if (overlay) {
-        var closeBtn = overlay.querySelector('[data-gpm="close"]');
+        const closeBtn = overlay.querySelector('[data-gpm="close"]');
         if (closeBtn) {
           closeBtn.click();
         } else {

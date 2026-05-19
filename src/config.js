@@ -212,19 +212,19 @@ function extractChatIdFromUrl(urlOrHref) {
 function gpmWaitForElement(selector, timeout) {
   if (timeout === undefined) timeout = 10000;
   return new Promise(function (resolve) {
-    var el = document.querySelector(selector);
+    const el = document.querySelector(selector);
     if (el) return resolve(el);
-    var timer;
-    var observer = new MutationObserver(function (_, obs) {
-      var found = document.querySelector(selector);
+    const timer = { id: null };
+    const observer = new MutationObserver(function (_, obs) {
+      const found = document.querySelector(selector);
       if (found) {
         obs.disconnect();
-        clearTimeout(timer);
+        clearTimeout(timer.id);
         resolve(found);
       }
     });
     observer.observe(document.body, { childList: true, subtree: true });
-    timer = setTimeout(function () {
+    timer.id = setTimeout(function () {
       observer.disconnect();
       resolve(null);
     }, timeout);
@@ -242,16 +242,16 @@ function gpmWaitForElement(selector, timeout) {
 function gpmWaitForSidebar(timeout) {
   if (timeout === undefined) timeout = 15000;
 
-  var tryFind = function () {
+  const tryFind = function () {
     // Structural discovery: walk up from a chat link to the sidebar container.
     // We do NOT rely on overflow/scroll styles — the new Gemini layout may not
     // use traditional scrolling. Instead we climb from the chat link until we hit
     // the body, and take the widest ancestor that still looks like a nav list.
-    var chatLink = document.querySelector('a[href^="/app/"]');
+    const chatLink = document.querySelector('a[href^="/app/"]');
     if (chatLink) {
-      var el = chatLink.parentElement;
-      var candidate = null;
-      for (var i = 0; i < 15; i++) {
+      let el = chatLink.parentElement;
+      let candidate = null;
+      for (let i = 0; i < 15; i++) {
         if (!el || el === document.body) break;
         // Track the deepest element that has multiple children (likely a list)
         if (el.children.length >= 2) {
@@ -266,20 +266,20 @@ function gpmWaitForSidebar(timeout) {
   };
 
   return new Promise(function (resolve) {
-    var found = tryFind();
+    const found = tryFind();
     if (found) return resolve(found);
 
-    var timer;
-    var observer = new MutationObserver(function (_, obs) {
-      var found = tryFind();
+    const timer = { id: null };
+    const observer = new MutationObserver(function (_, obs) {
+      const found = tryFind();
       if (found) {
         obs.disconnect();
-        clearTimeout(timer);
+        clearTimeout(timer.id);
         resolve(found);
       }
     });
     observer.observe(document.body, { childList: true, subtree: true });
-    timer = setTimeout(function () {
+    timer.id = setTimeout(function () {
       observer.disconnect();
       resolve(null);
     }, timeout);

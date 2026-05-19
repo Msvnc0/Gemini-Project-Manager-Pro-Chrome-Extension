@@ -724,7 +724,6 @@ function gpmCreateChatRow(chatId, mapping, project, allProjects) {
 
     const ids = proj.chatIds || [];
     const fromIdx = ids.indexOf(droppedChatId);
-    const toIdx = ids.indexOf(chatId);
     if (fromIdx === -1) {
       // Chat from another project — assign first
       await GPMStorage.assignChat(droppedChatId, project.id);
@@ -754,7 +753,7 @@ function gpmCreateChatRow(chatId, mapping, project, allProjects) {
 //  CONTEXT MENUS (using Shadow DOM modal host)
 // ══════════════════════════════════════
 
-async function gpmShowProjectContextMenu(x, y, project, allProjects) {
+async function gpmShowProjectContextMenu(x, y, project, _allProjects) {
   gpmLog('Showing project context menu for:', project.name);
   if (!GPM_STATE.modalRoot) {
     gpmError('Modal root not initialized!');

@@ -36,11 +36,11 @@ export default [
         // dom-injection.js
         gpmInjectStyles: 'readonly',
         gpmCreateModalHost: 'readonly',
-        gpmFindInsertionPoint: 'readonly',
         gpmInjectProjectSection: 'readonly',
         gpmWaitForSidebarContent: 'readonly',
         gpmSidebarHasContent: 'readonly',
         gpmObserveForSidebar: 'readonly',
+        gpmStopHealthMonitor: 'readonly',
         // project-tree.js
         gpmRenderTree: 'readonly',
         gpmScheduleAliasResolve: 'readonly',
@@ -71,7 +71,6 @@ export default [
         gpmStartHealthMonitor: 'readonly',
         gpmCleanupAfterImport: 'readonly',
         detectBrowserLanguage: 'readonly',
-        showToast: 'readonly',
         // modules
         GPMValidators: 'readonly',
         GPMHistory: 'readonly',
@@ -90,7 +89,11 @@ export default [
     },
     rules: {
       // Relaxed rules for existing codebase
-      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      'no-unused-vars': ['warn', {
+        vars: 'local',
+        argsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_|^e$',
+      }],
       'no-console': 'off', // We use gpmLog/gpmWarn/gpmError wrappers
       'no-undef': 'error',
       // Disabled: content_scripts share global scope — functions defined in one file
