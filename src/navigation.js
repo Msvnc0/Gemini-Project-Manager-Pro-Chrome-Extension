@@ -201,8 +201,7 @@ function gpmOnNavigate() {
   setTimeout(() => {
     if (!gpmIsContextValid()) return;
     if (!document.querySelector('#gpm-project-section')) {
-      const sidebar = document.querySelector(GPM_SELECTORS.sidebar);
-      if (sidebar) gpmInjectProjectSection(sidebar);
+      gpmInjectProjectSection();
     }
     gpmInjectQuickPromptTrigger();
   }, GPM_CONFIG.NAV_DELAY);

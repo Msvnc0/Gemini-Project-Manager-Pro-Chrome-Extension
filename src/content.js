@@ -30,14 +30,21 @@ function gpmResetObserversFlag() {
 }
 
 async function gpmInit() {
+  // Prevent concurrent initialization races (multiple triggers can fire simultaneously)
+  if (GPM_STATE._initializing) return;
   if (GPM_STATE.initialized) return;
+
+  GPM_STATE._initializing = true;
 
   gpmLog(
     'gpmInit() started - v' +
       (typeof chrome !== 'undefined' && chrome.runtime?.getManifest ? chrome.runtime.getManifest().version : 'dev')
   );
 
-  // ── Step 1: Storage initialization & schema migration ──
+  // ── Start sidebar wait immediately (usually the longest pole) ──
+  const sidebarPromise = gpmWaitForSidebar(GPM_CONFIG.SIDEBAR_TIMEOUT);
+
+  // ── Storage + settings (needed before tree render) ──
   try {
     await GPMStorage.initializeStorage();
     gpmLog('Storage initialized');
@@ -45,7 +52,6 @@ async function gpmInit() {
     gpmError('Storage initialization failed:', e);
   }
 
-  // ── Step 2: Load settings & set language ──
   const settings = await GPMStorage.getSettings();
   if (settings.lang) {
     gpmSetLang(settings.lang);
@@ -55,49 +61,37 @@ async function gpmInit() {
     await GPMStorage.saveSettings({ ...settings, lang: detectedLang });
   }
 
-  // ── Step 3: Run data integrity check ──
-  try {
-    const integrityResult = await GPMIntegrityCheck.run();
-    if (integrityResult.issues && integrityResult.issues.length > 0) {
-      gpmLog('Integrity check found issues:', integrityResult.issues.length);
-    }
-  } catch (e) {
-    gpmWarn('Integrity check failed:', e);
-  }
+  // ── Fire-and-forget: everything that does NOT block injection ──
+  Promise.resolve()
+    .then(() => GPMIntegrityCheck.run())
+    .then((integrityResult) => {
+      if (integrityResult.issues && integrityResult.issues.length > 0) {
+        gpmLog('Integrity check found issues:', integrityResult.issues.length);
+      }
+    })
+    .catch((e) => gpmWarn('Integrity check failed:', e));
 
-  // ── Step 4: Start context recovery monitoring ──
-  try {
-    GPMContextRecovery.startMonitoring();
-  } catch (e) {
-    gpmWarn('Context recovery monitoring failed:', e);
-  }
+  Promise.resolve()
+    .then(() => GPMContextRecovery.startMonitoring())
+    .catch((e) => gpmWarn('Context recovery monitoring failed:', e));
 
-  // ── Step 5: Initialize keyboard shortcuts ──
-  try {
-    if (typeof GPMKeyboardShortcuts !== 'undefined') {
-      GPMKeyboardShortcuts.init();
-    }
-  } catch (e) {
-    gpmWarn('Keyboard shortcuts init failed:', e);
-  }
+  Promise.resolve()
+    .then(() => {
+      if (typeof GPMKeyboardShortcuts !== 'undefined') GPMKeyboardShortcuts.init();
+    })
+    .catch((e) => gpmWarn('Keyboard shortcuts init failed:', e));
 
-  // ── Step 6: Track session ──
-  try {
-    if (typeof GPMUsageTracker !== 'undefined') {
-      await GPMUsageTracker.trackSession();
-    }
-  } catch (e) {
-    gpmWarn('Session tracking failed:', e);
-  }
+  Promise.resolve()
+    .then(() => {
+      if (typeof GPMUsageTracker !== 'undefined') return GPMUsageTracker.trackSession();
+    })
+    .catch((e) => gpmWarn('Session tracking failed:', e));
 
-  // ── Step 7: Auto backup check ──
-  try {
-    if (typeof GPMBackupManager !== 'undefined') {
-      await GPMBackupManager.autoBackupIfNeeded();
-    }
-  } catch (e) {
-    gpmWarn('Auto backup failed:', e);
-  }
+  Promise.resolve()
+    .then(() => {
+      if (typeof GPMBackupManager !== 'undefined') return GPMBackupManager.autoBackupIfNeeded();
+    })
+    .catch((e) => gpmWarn('Auto backup failed:', e));
 
   // ── Step 8: Inject Quick Prompt trigger EARLY ──
   gpmLog('Early QP injection attempt');
@@ -108,29 +102,30 @@ async function gpmInit() {
     gpmError('Early QP injection error:', e);
   }
 
-  // ── Step 9: Wait for sidebar ──
-  const sidebar = await gpmWaitForElement(GPM_SELECTORS.sidebar, GPM_CONFIG.SIDEBAR_TIMEOUT);
+  // ── Step 9: Wait only for sidebar (already kicked off at top) ──
+  const sidebar = await sidebarPromise;
   if (!sidebar) {
     gpmWarn('Sidebar not found. Retrying...');
     gpmObserveForSidebar();
+    GPM_STATE._initializing = false;
     return;
   }
 
   gpmLog('Sidebar found:', sidebar.tagName, sidebar.className?.slice(0, 60));
 
   const contentReady = await gpmWaitForSidebarContent(sidebar, GPM_CONFIG.CONTENT_TIMEOUT);
-
   if (!contentReady) {
     gpmWarn('Sidebar content not ready after timeout, proceeding with empty sidebar');
   }
 
   GPM_STATE.initialized = true;
+  GPM_STATE._initializing = false;
   GPM_STATE.reinitFailCount = 0;
   gpmLog('Sidebar content ready. Injecting all modules.');
 
   // ── Step 10: Initialize DOM injection modules ──
   gpmInjectStyles();
-  gpmInjectProjectSection(sidebar);
+  gpmInjectProjectSection();
   gpmCreateModalHost();
   gpmInjectQuickPromptTrigger();
   gpmObserveQuickPromptButton();

@@ -394,16 +394,22 @@ describe('gpmInjectQuickPromptTrigger()', () => {
     document.querySelectorAll('.leading-actions-wrapper, toolbox-drawer').forEach(el => el.remove());
   });
 
-  it('should not inject if button already exists', () => {
+  it('should not inject if button already exists in toolbar', () => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'leading-actions-wrapper';
+    const sibling = document.createElement('span');
+    sibling.textContent = 'x';
+    wrapper.appendChild(sibling);
     const existing = document.createElement('button');
     existing.id = 'gpm-qp-trigger';
-    document.body.appendChild(existing);
+    wrapper.appendChild(existing);
+    document.body.appendChild(wrapper);
 
     gpmInjectQuickPromptTrigger();
     const buttons = document.querySelectorAll('#gpm-qp-trigger');
     expect(buttons.length).toBe(1);
 
-    existing.remove();
+    wrapper.remove();
   });
 
   it('should inject floating button when no toolbar found', () => {
@@ -417,12 +423,17 @@ describe('gpmInjectQuickPromptTrigger()', () => {
   it('should inject into toolbar when found', () => {
     const wrapper = document.createElement('div');
     wrapper.className = 'leading-actions-wrapper';
+    const sibling = document.createElement('span');
+    sibling.textContent = 'x';
+    wrapper.appendChild(sibling);
     document.body.appendChild(wrapper);
 
     gpmInjectQuickPromptTrigger();
     const btn = document.querySelector('#gpm-qp-trigger');
     expect(btn).not.toBeNull();
+    // The button is placed inside the toolbar wrapper, so it's NOT floating
     expect(btn.dataset.gpmFloating).toBeUndefined();
+    expect(btn.parentElement).toBe(wrapper);
 
     wrapper.remove();
     btn?.remove();

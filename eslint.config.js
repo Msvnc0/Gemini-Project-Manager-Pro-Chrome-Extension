@@ -31,6 +31,8 @@ export default [
         gpmIsContextValid: 'readonly',
         extractChatIdFromUrl: 'readonly',
         gpmWaitForElement: 'readonly',
+        gpmWaitForSidebar: 'readonly',
+        _gpmIsValidSidebar: 'readonly',
         // dom-injection.js
         gpmInjectStyles: 'readonly',
         gpmCreateModalHost: 'readonly',

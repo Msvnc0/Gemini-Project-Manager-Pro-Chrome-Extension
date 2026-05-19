@@ -63,6 +63,8 @@ const GPM_STATE = {
   reinitFailCount: 0, // Consecutive re-init failure counter
   _qpCheckInterval: null, // Quick Prompt button check interval ID
   _qpMutationObserver: null, // Quick Prompt button MutationObserver instance
+  _qpLastToolbarMethod: null, // Last successful toolbar placement method (prevents method-flapping flicker)
+  _initializing: false, // Prevents concurrent gpmInit() calls from racing
   _deletionCheckTimer: null,
   _pendingDeletedChatIds: null,
   _deletionPhaseCount: 0,
@@ -215,6 +217,61 @@ function gpmWaitForElement(selector, timeout) {
     var timer;
     var observer = new MutationObserver(function (_, obs) {
       var found = document.querySelector(selector);
+      if (found) {
+        obs.disconnect();
+        clearTimeout(timer);
+        resolve(found);
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    timer = setTimeout(function () {
+      observer.disconnect();
+      resolve(null);
+    }, timeout);
+  });
+}
+
+/**
+ * Wait for Gemini's actual sidebar to appear.
+ * Uses structural discovery (chat link → scrollable ancestor) first,
+ * then falls back to CSS selectors. This avoids matching the wrong
+ * container (e.g., main-content wrappers) on the new Gemini layout.
+ * @param {number} timeout
+ * @returns {Promise<Element|null>}
+ */
+function gpmWaitForSidebar(timeout) {
+  if (timeout === undefined) timeout = 15000;
+
+  var tryFind = function () {
+    // Structural discovery: walk up from a chat link to the sidebar container.
+    // We do NOT rely on overflow/scroll styles — the new Gemini layout may not
+    // use traditional scrolling. Instead we climb from the chat link until we hit
+    // the body, and take the widest ancestor that still looks like a nav list.
+    var chatLink = document.querySelector('a[href^="/app/"]');
+    if (chatLink) {
+      var el = chatLink.parentElement;
+      var candidate = null;
+      for (var i = 0; i < 15; i++) {
+        if (!el || el === document.body) break;
+        // Track the deepest element that has multiple children (likely a list)
+        if (el.children.length >= 2) {
+          candidate = el;
+        }
+        el = el.parentElement;
+      }
+      if (candidate) return candidate;
+    }
+    // CSS fallback — only if structural discovery failed
+    return document.querySelector(GPM_SELECTORS.sidebar);
+  };
+
+  return new Promise(function (resolve) {
+    var found = tryFind();
+    if (found) return resolve(found);
+
+    var timer;
+    var observer = new MutationObserver(function (_, obs) {
+      var found = tryFind();
       if (found) {
         obs.disconnect();
         clearTimeout(timer);

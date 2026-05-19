@@ -268,7 +268,14 @@ function _gpmNodeContainsToolsLabel(node) {
  */
 function _gpmInjectFloatingQPButton() {
   const existing = document.querySelector('#gpm-qp-trigger');
-  if (existing) existing.remove();
+  if (existing) {
+    // Already floating — nothing to do (prevents flicker from repeated re-creation)
+    if (existing.dataset.gpmFloating === 'true') {
+      return;
+    }
+    // Otherwise remove the old one (e.g., toolbar placement failed)
+    existing.remove();
+  }
 
   const btn = _gpmCreateQPButton();
   btn.dataset.gpmFloating = 'true';
@@ -307,6 +314,61 @@ function _gpmInjectFloatingQPButton() {
   gpmLog('⚡ button injected as floating fallback');
 }
 
+function _gpmFindToolbarSlotFast() {
+  const lastMethod = GPM_STATE._qpLastToolbarMethod;
+  if (!lastMethod) return null;
+
+  const inputArea = document.querySelector(GPM_SELECTORS.inputArea);
+  const inputRect = inputArea?.getBoundingClientRect();
+
+  // Fast-path: re-find the same container using the last successful strategy
+  // This avoids running all slow strategies every time.
+  if (lastMethod.startsWith('leading-actions')) {
+    const leadingActions = document.querySelector(GPM_SELECTORS.leadingActions);
+    if (leadingActions) {
+      if (inputRect) {
+        const actionsRect = leadingActions.getBoundingClientRect();
+        if (Math.abs(inputRect.top - actionsRect.top) >= 200) {
+          GPM_STATE._qpLastToolbarMethod = null;
+          return null;
+        }
+      }
+      const toolbox = leadingActions.querySelector(GPM_SELECTORS.toolboxDrawer);
+      if (toolbox && toolbox.parentElement === leadingActions) {
+        return { container: leadingActions, insertRef: toolbox.nextSibling, method: lastMethod };
+      }
+      return { container: leadingActions, insertRef: null, method: lastMethod };
+    }
+  }
+
+  if (lastMethod.startsWith('toolbox')) {
+    const toolboxEl = document.querySelector(GPM_SELECTORS.toolboxDrawer);
+    if (toolboxEl && toolboxEl.parentElement) {
+      // Ensure insertRef is still a child of container
+      const container = toolboxEl.parentElement;
+      if (toolboxEl.parentElement === container) {
+        return { container: container, insertRef: toolboxEl.nextSibling, method: lastMethod };
+      }
+      return { container: container, insertRef: null, method: lastMethod };
+    }
+  }
+
+  if (lastMethod.startsWith('content-search')) {
+    const toolsButton = _gpmFindToolsButton();
+    if (toolsButton && toolsButton.parentElement) {
+      const container = toolsButton.parentElement;
+      if (toolsButton.parentElement === container) {
+        return { container: container, insertRef: toolsButton.nextSibling, method: lastMethod };
+      }
+      return { container: container, insertRef: null, method: lastMethod };
+    }
+  }
+
+  // Cache miss — clear it so next full search can set a new one
+  GPM_STATE._qpLastToolbarMethod = null;
+  return null;
+}
+
 /**
  * Inject the ⚡ Quick Prompt trigger button into the Gemini toolbar.
  * Uses a multi-strategy approach to find the right injection point.
@@ -319,25 +381,43 @@ function _gpmInjectFloatingQPButton() {
 function gpmInjectQuickPromptTrigger() {
   const existingBtn = document.querySelector('#gpm-qp-trigger');
 
-  // If button exists and is NOT floating, we're done (it's in the toolbar)
-  if (existingBtn && existingBtn.dataset.gpmFloating !== 'true') {
-    return;
+  // If button exists and is connected, check whether it's in a real toolbar container.
+  // We used to just check `gpmFloating !== 'true'`, but on the new Gemini layout the button
+  // may be in body or a generic wrapper instead of the actual toolbar.
+  if (existingBtn && existingBtn.isConnected) {
+    const isInToolbar =
+      existingBtn.dataset.gpmFloating !== 'true' &&
+      existingBtn.parentElement &&
+      existingBtn.parentElement !== document.body &&
+      existingBtn.parentElement.children.length >= 2;
+    if (isInToolbar) {
+      return;
+    }
   }
 
-  const slot = _gpmFindToolbarSlot();
+  // Try fast-path first (cached last-successful placement strategy)
+  let slot = _gpmFindToolbarSlotFast();
+  // Only if fast-path missed, run the full (slower) structural search
+  if (!slot) {
+    slot = _gpmFindToolbarSlot();
+  }
   gpmLog('_gpmFindToolbarSlot result:', slot ? slot.method : 'null (no toolbar found)');
 
   if (slot) {
-    // If a floating button exists, remove it — we'll place it in the toolbar
+    // Remove existing button (floating or misplaced) so we can place it correctly
     if (existingBtn) {
-      gpmLog('Relocating floating button into toolbar');
+      gpmLog('Relocating existing button into toolbar via', slot.method);
       existingBtn.remove();
     }
 
     const btn = _gpmCreateQPButton();
     try {
-      if (slot.insertRef) {
+      if (slot.insertRef && slot.insertRef.parentElement === slot.container) {
         slot.container.insertBefore(btn, slot.insertRef);
+      } else if (slot.insertRef) {
+        // insertRef is stale (no longer child of container) — append instead
+        gpmLog('insertRef stale for', slot.method, '— using appendChild');
+        slot.container.appendChild(btn);
       } else {
         slot.container.appendChild(btn);
       }
@@ -348,19 +428,18 @@ function gpmInjectQuickPromptTrigger() {
         slot.container.tagName,
         slot.container.className?.slice(0, 80)
       );
-      gpmLog('⚡ button placed via:', slot.method);
+      // Remember the successful placement strategy for fast re-injection next time
+      GPM_STATE._qpLastToolbarMethod = slot.method;
 
       // ── Post-injection visibility check ──
-      // Schedule a visibility check after the browser has had time to layout.
-      // If the button is placed in a hidden/clipped/zero-size container,
-      // remove it and use the floating fallback instead.
-      requestAnimationFrame(() => {
+      // Wait a short delay to let Gemini finish DOM/layout before checking.
+      // requestAnimationFrame fires too early and can falsely detect zero-size rects.
+      setTimeout(() => {
         _gpmVerifyButtonVisibility();
-      });
+      }, 500);
       return;
     } catch (e) {
       gpmError('⚡ button injection FAILED via', slot.method, ':', e.message);
-      gpmWarn('⚡ button injection failed via', slot.method, ':', e.message);
     }
   }
 
