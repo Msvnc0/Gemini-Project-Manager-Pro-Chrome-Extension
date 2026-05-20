@@ -89,11 +89,20 @@ function gpmScheduleAliasResolve() {
           'nova conversa',
         ];
         const lowerTitle = title.toLowerCase();
-        if (GARBAGE.some((g) => lowerTitle === g || lowerTitle.startsWith(g + ' '))) {
+        const isGarbage = GARBAGE.some((g) => lowerTitle === g || lowerTitle.startsWith(g + ' '));
+        if (isGarbage) {
           title = '';
         }
 
-        if (title && title !== cid && title !== currentAlias && title.length > 1) {
+        // If the CURRENT alias is garbage, clear it so the next recheck tries again
+        const isCurrentGarbage = GARBAGE.some((g) => currentAlias.toLowerCase().startsWith(g));
+        if (isCurrentGarbage) {
+          chatMap[cid].alias = '';
+          chatMap[cid]._autoResolved = true;
+          aliasUpdated = true;
+        }
+
+        if (title && title !== cid && title !== currentAlias && title.length > 1 && !isGarbage) {
           chatMap[cid].alias = title;
           chatMap[cid]._autoResolved = true;
           aliasUpdated = true;
