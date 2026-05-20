@@ -95,6 +95,14 @@ function gpmResetState() {
     clearInterval(GPM_STATE._qpCheckInterval);
     GPM_STATE._qpCheckInterval = null;
   }
+  if (GPM_STATE._aliasRecheckInterval) {
+    clearInterval(GPM_STATE._aliasRecheckInterval);
+    GPM_STATE._aliasRecheckInterval = null;
+  }
+  if (GPM_STATE._fallbackDeletionInterval) {
+    clearInterval(GPM_STATE._fallbackDeletionInterval);
+    GPM_STATE._fallbackDeletionInterval = null;
+  }
   if (GPM_STATE._qpMutationObserver) {
     GPM_STATE._qpMutationObserver.disconnect();
     GPM_STATE._qpMutationObserver = null;

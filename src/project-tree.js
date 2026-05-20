@@ -166,6 +166,8 @@ async function gpmRenderTree() {
   const [projects, chatMap] = await Promise.all([GPMStorage.getProjects(), GPMStorage.getChatMap()]);
   const rootProjects = GPMStorage.getRootProjects(projects);
   const _childMap = _gpmBuildChildMap(projects);
+  const _currentChatId = gpmGetCurrentChatId();
+  GPM_STATE._currentChatId = _currentChatId;
 
   // Schedule alias resolution separately (avoids render→save→render loop)
   gpmScheduleAliasResolve();
@@ -564,11 +566,12 @@ function gpmCreateProjectRow(project, allProjects, chatMap, childMap) {
     // Check if a PROJECT is being dropped
     const droppedProjectId = e.dataTransfer.getData('text/gpm-project-id');
     if (droppedProjectId && droppedProjectId !== project.id) {
+      const projects = await GPMStorage.getProjects();
       const isDescendant = (parentId, childId, visited) => {
         if (!visited) visited = new Set();
         if (visited.has(childId)) return false;
         visited.add(childId);
-        const p = allProjects.find((pr) => pr.id === childId);
+        const p = projects.find((pr) => pr.id === childId);
         if (!p) return false;
         if (p.parentId === parentId) return true;
         if (p.parentId) return isDescendant(parentId, p.parentId, visited);
@@ -580,7 +583,6 @@ function gpmCreateProjectRow(project, allProjects, chatMap, childMap) {
         return;
       }
 
-      const projects = await GPMStorage.getProjects();
       const droppedProject = projects.find((p) => p.id === droppedProjectId);
       if (!droppedProject) return;
 
@@ -681,9 +683,8 @@ function gpmCreateProjectRow(project, allProjects, chatMap, childMap) {
         const isGarbage = ['new chat', 'yeni sohbet', 'nouveau chat', 'neuer chat'].some((g) =>
           chatTitle.toLowerCase().startsWith(g)
         );
-        if (!isGarbage) {
-          const cm = await GPMStorage.getChatMap();
-          if (!cm[cleanId]?.alias) await GPMStorage.setChatAlias(cleanId, chatTitle);
+        if (!isGarbage && !freshChatMap[cleanId]?.alias) {
+          await GPMStorage.setChatAlias(cleanId, chatTitle);
         }
       }
       gpmRenderTree();
@@ -709,7 +710,7 @@ function gpmCreateProjectRow(project, allProjects, chatMap, childMap) {
 function gpmCreateChatRow(chatId, mapping, project, allProjects) {
   const alias = mapping?.alias && mapping.alias !== chatId ? mapping.alias : t('newChat') || 'New chat';
   const pinned = mapping?.pinned || false;
-  const currentChatId = gpmGetCurrentChatId();
+  const currentChatId = GPM_STATE._currentChatId || '';
 
   const row = document.createElement('div');
   row.setAttribute('data-gpm', 'chat');

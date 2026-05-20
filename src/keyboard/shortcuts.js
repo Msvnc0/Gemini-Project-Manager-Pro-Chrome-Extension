@@ -137,7 +137,10 @@ const GPMKeyboardShortcuts = (() => {
 
     let key = e.key.toLowerCase();
     if (key === ' ') key = 'space';
-    if (key.startsWith('arrow')) key = key.replace('arrow', 'arrow_');
+    if (key === 'arrowup') key = 'arrow_up';
+    if (key === 'arrowdown') key = 'arrow_down';
+    if (key === 'arrowleft') key = 'arrow_left';
+    if (key === 'arrowright') key = 'arrow_right';
 
     parts.push(key);
     return parts.join('+');

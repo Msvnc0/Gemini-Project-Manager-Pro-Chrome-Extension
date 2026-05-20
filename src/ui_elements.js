@@ -1337,9 +1337,17 @@ const GPMUI = (() => {
       style: { width: '100%', marginBottom: '16px' },
       onClick: async () => {
         if (typeof GPMBackupManager !== 'undefined') {
-          await GPMBackupManager.createBackup('manual', t('newBackup'));
+          try {
+            await GPMBackupManager.createBackup('manual', t('newBackup'));
+          } catch (e) {
+            if (typeof gpmWarn === 'function') gpmWarn('Backup creation failed:', e);
+          }
           overlay.remove();
-          showBackupPanel(shadowRoot);
+          try {
+            showBackupPanel(shadowRoot);
+          } catch (e) {
+            if (typeof gpmWarn === 'function') gpmWarn('Backup panel refresh failed:', e);
+          }
         }
       },
     });

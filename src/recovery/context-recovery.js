@@ -24,6 +24,8 @@ const GPMContextRecovery = (() => {
     gpmLog('Context recovery monitoring started');
   }
 
+  let _recoveryStyleEl = null;
+
   function checkContext() {
     try {
       const isValid = !!(chrome.runtime && chrome.runtime.id);
@@ -109,6 +111,7 @@ const GPMContextRecovery = (() => {
 
     overlay.appendChild(container);
     document.head.appendChild(style);
+    _recoveryStyleEl = style;
     document.body.appendChild(overlay);
 
     recoveryOverlay = overlay;
@@ -140,6 +143,10 @@ const GPMContextRecovery = (() => {
     if (countdownInterval) {
       clearInterval(countdownInterval);
       countdownInterval = null;
+    }
+    if (_recoveryStyleEl && _recoveryStyleEl.parentNode) {
+      _recoveryStyleEl.remove();
+      _recoveryStyleEl = null;
     }
     if (recoveryOverlay && recoveryOverlay.parentNode) {
       recoveryOverlay.remove();

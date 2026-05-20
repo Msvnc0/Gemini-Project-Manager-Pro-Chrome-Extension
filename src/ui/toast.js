@@ -75,7 +75,7 @@
       if (oldest) {
         clearTimeout(oldest._gpmTimerId);
         oldest.remove();
-      }
+      } else break;
     }
 
     const toast = document.createElement('div');

@@ -16,6 +16,7 @@ const GPMBackupManager = (() => {
   const MAX_VERSIONS = 5;
   const BACKUP_KEY = 'gpm_backups';
   const AUTO_BACKUP_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
+  let _backupLock = Promise.resolve();
 
   const TRIGGERS = {
     BEFORE_SAVE: 'before_save',
@@ -28,49 +29,54 @@ const GPMBackupManager = (() => {
   };
 
   async function createBackup(trigger = 'manual', description = '') {
-    try {
-      const [projects, chatMap, prompts, settings] = await Promise.all([
-        GPMStorage.getProjects(),
-        GPMStorage.getChatMap(),
-        GPMStorage.getQuickPrompts(),
-        GPMStorage.getSettings(),
-      ]);
+    const result = await new Promise((resolve) => {
+      _backupLock = _backupLock.then(async () => {
+        try {
+          const [projects, chatMap, prompts, settings] = await Promise.all([
+            GPMStorage.getProjects(),
+            GPMStorage.getChatMap(),
+            GPMStorage.getQuickPrompts(),
+            GPMStorage.getSettings(),
+          ]);
 
-      const data = {
-        projects,
-        chatMap,
-        prompts,
-        settings,
-      };
+          const data = {
+            projects,
+            chatMap,
+            prompts,
+            settings,
+          };
 
-      const backup = {
-        id: generateUid(),
-        timestamp: Date.now(),
-        trigger,
-        description,
-        data,
-        stats: {
-          projectCount: projects.length,
-          chatCount: Object.keys(chatMap).length,
-          promptCount: prompts.length,
-        },
-      };
+          const backup = {
+            id: generateUid(),
+            timestamp: Date.now(),
+            trigger,
+            description,
+            data,
+            stats: {
+              projectCount: projects.length,
+              chatCount: Object.keys(chatMap).length,
+              promptCount: prompts.length,
+            },
+          };
 
-      const backups = await getBackups();
-      backups.push(backup);
+          const backups = await getBackups();
+          backups.push(backup);
 
-      while (backups.length > MAX_VERSIONS) {
-        backups.shift();
-      }
+          while (backups.length > MAX_VERSIONS) {
+            backups.shift();
+          }
 
-      await chrome.storage.local.set({ [BACKUP_KEY]: backups });
+          await chrome.storage.local.set({ [BACKUP_KEY]: backups });
 
-      gpmLog('Backup created:', backup.id, 'trigger:', trigger, 'stats:', backup.stats);
-      return backup;
-    } catch (e) {
-      gpmError('Failed to create backup:', e);
-      return null;
-    }
+          gpmLog('Backup created:', backup.id, 'trigger:', trigger, 'stats:', backup.stats);
+          resolve(backup);
+        } catch (e) {
+          gpmError('Failed to create backup:', e);
+          resolve(null);
+        }
+      });
+    });
+    return result;
   }
 
   async function getBackups() {

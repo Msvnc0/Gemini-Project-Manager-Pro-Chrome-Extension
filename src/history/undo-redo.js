@@ -101,12 +101,11 @@ const GPMHistory = (() => {
               if (!projects.find((existing) => existing.id === p.id)) {
                 projects.push(p);
               }
-            }
-
-            if (data.projectData.parentId) {
-              const parent = projects.find((p) => p.id === data.projectData.parentId);
-              if (parent && !parent.children.includes(data.projectData.id)) {
-                parent.children.push(data.projectData.id);
+              if (p.parentId) {
+                const parent = projects.find((pr) => pr.id === p.parentId);
+                if (parent && !parent.children.includes(p.id)) {
+                  parent.children.push(p.id);
+                }
               }
             }
 

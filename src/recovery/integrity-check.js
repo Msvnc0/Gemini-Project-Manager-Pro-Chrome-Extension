@@ -261,11 +261,9 @@ const GPMIntegrityCheck = (() => {
     }
 
     if (fixed.length > 0) {
-      if (fixed.some((f) => f.type === 'orphaned_chatmap_entries')) {
-        await GPMStorage.saveProjects(projects);
+      await GPMStorage.saveProjects(projects);
+      if (fixed.some((f) => f.type === 'orphaned_chatmap_entries' || f.type === 'orphan_chatids')) {
         await GPMStorage.saveChatMap(chatMap);
-      } else {
-        await GPMStorage.saveProjects(projects);
       }
       gpmLog('Auto-fixed', fixed.length, 'integrity issues');
     }

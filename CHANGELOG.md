@@ -5,10 +5,25 @@
 - **Fix:** Drag-drop chat title was stale — now reads live from DOM at drag time
 - **Fix:** Search input stripped spaces on each keystroke — spaces are now preserved
 - **Fix:** Prevented project section from injecting into wrong element (top nav/main content)
-- **Perf:** Projects now inject immediately into sidebar even before chat links load (was silently aborting)
-- **Perf:** Sidebar content wait reduced from 10s to 3s — projects render into empty sidebar
+- **Fix:** Memory leak — `_aliasRecheckInterval` and `_fallbackDeletionInterval` never cleared on re-init
+- **Fix:** Storage lock chain broke after first error, subsequent writes ran without synchronization
+- **Fix:** Migration failure left storage in inconsistent state with no recovery marker
+- **Fix:** Backup panel calls not properly error-handled (uncaught promise rejections)
+- **Fix:** Integrity auto-fix didn't persist chatMap for orphan/missing-parent/circular-ref fixes
+- **Fix:** Undo delete-project didn't restore parent-children relationships for nested projects
+- **Fix:** Arrow key keyboard shortcuts didn't work (key normalization bug)
+- **Fix:** Recovery UI style element never removed on dismiss (DOM accumulation)
+- **Fix:** Duplicate `gpmStopHealthMonitor` call in reset
+- **Fix:** Drag-drop `isDescendant` used stale closure data instead of fresh storage
+- **Fix:** Redundant storage read in chat drop handler
+- **Perf:** Projects now inject immediately into sidebar even before chat links load
+- **Perf:** Sidebar content wait reduced from 10s to 3s
 - **Perf:** Navigation re-inject delay reduced from 600ms to 300ms
 - **Perf:** Storage reads parallelized in render (getProjects + getChatMap)
+- **Perf:** `gpmGetCurrentChatId()` cached per render instead of per chat row
+- **Perf:** Backup creation serialized with lock to prevent concurrent overwrite
+- **Quality:** `gpmClearSelectorCache` uses `Object.keys()` instead of `for...in`
+- **Quality:** Toast removal guard added to prevent infinite loop
 
 ## v1.2.8 — Gemini UI Compatibility & Health Scan
 

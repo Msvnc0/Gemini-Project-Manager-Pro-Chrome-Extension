@@ -138,13 +138,10 @@ const GPMStorage = (() => {
       try {
         return await fn();
       } finally {
-        if (locked) await _releaseCrossTabLock();
+        await _releaseCrossTabLock();
       }
     });
-    _localLock = next.catch((err) => {
-      gpmError('Lock chain error:', err);
-      return Promise.resolve();
-    });
+    _localLock = next.catch(() => Promise.resolve());
     return next;
   }
 

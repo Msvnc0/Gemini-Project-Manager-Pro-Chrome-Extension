@@ -182,7 +182,7 @@ function gpmQuerySelector(selectorKey, context) {
  * Called during re-initialization when DOM structure may have changed.
  */
 function gpmClearSelectorCache() {
-  for (const key in _gpmSelectorCache) {
+  for (const key of Object.keys(_gpmSelectorCache)) {
     delete _gpmSelectorCache[key];
   }
   if (typeof gpmLog === 'function') gpmLog('Selector cache cleared');

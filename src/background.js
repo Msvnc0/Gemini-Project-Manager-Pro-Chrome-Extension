@@ -159,7 +159,10 @@ async function gpmRunMigrations(currentVersion) {
       data = migration.migrate(data);
     } catch (err) {
       console.error('[GPM] Migration failed (v' + migration.fromVersion + '→v' + migration.toVersion + '):', err);
-      // Stop on failure — don't corrupt data further
+      await chrome.storage.local.set({
+        gpm_schemaVersion: currentVersion,
+        gpm_migration_failed: { from: currentVersion, to: migration.toVersion, error: err.message, timestamp: Date.now() },
+      });
       return;
     }
   }
