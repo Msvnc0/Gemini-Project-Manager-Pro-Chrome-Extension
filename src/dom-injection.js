@@ -470,38 +470,52 @@ function gpmInjectProjectSection(_sidebar) {
   // We do NOT trust the _sidebar parameter because it may be a main-content
   // wrapper matched by the broad CSS selector. Instead we climb from the
   // first chat link up to the real sidebar container.
+  let sidebar = null;
+  let listContainer = null;
+
   const chatLink = document.querySelector('a[href^="/app/"]');
-  if (!chatLink) {
-    gpmWarn('gpmInjectProjectSection: no chat links in DOM yet, aborting');
+  if (chatLink) {
+    listContainer = chatLink.parentElement;
+    for (let i = 0; i < 10; i++) {
+      if (!listContainer || listContainer === document.body) break;
+      if (listContainer.children.length >= 2) break;
+      listContainer = listContainer.parentElement;
+    }
+    sidebar = listContainer && listContainer !== document.body ? listContainer.parentElement : null;
+    if (sidebar && sidebar !== document.body) {
+      gpmLog('Sidebar discovered from chat link:', sidebar.tagName, sidebar.className?.slice(0, 50));
+    } else {
+      sidebar = null;
+    }
+  }
+
+  // Fallback: use _sidebar parameter or CSS selector when no chat links exist yet
+  if (!sidebar) {
+    sidebar =
+      _sidebar ||
+      document.querySelector('nav') ||
+      document.querySelector('[role="navigation"]') ||
+      document.querySelector(GPM_SELECTORS.sidebar);
+    if (sidebar) {
+      gpmLog('Sidebar from fallback (no chat links):', sidebar.tagName, sidebar.className?.slice(0, 50));
+      listContainer = null;
+    }
+  }
+
+  if (!sidebar) {
+    gpmWarn('gpmInjectProjectSection: no sidebar found, aborting');
     return;
   }
-
-  let listContainer = chatLink.parentElement;
-  for (let i = 0; i < 10; i++) {
-    if (!listContainer || listContainer === document.body) break;
-    if (listContainer.children.length >= 2) break;
-    listContainer = listContainer.parentElement;
-  }
-
-  const sidebar = listContainer && listContainer !== document.body ? listContainer.parentElement : null;
-  if (!sidebar || sidebar === document.body) {
-    gpmWarn('gpmInjectProjectSection: could not discover sidebar from chat links, aborting');
-    return;
-  }
-
-  gpmLog('Sidebar discovered from chat link:', sidebar.tagName, sidebar.className?.slice(0, 50));
 
   GPM_STATE.container = document.createElement('div');
   GPM_STATE.container.setAttribute('data-gpm', 'root');
   GPM_STATE.container.id = 'gpm-project-section';
 
   try {
-    // Insert before the chat-link list container so Projects sits above chats
-    if (listContainer.parentElement === sidebar) {
+    if (listContainer && listContainer.parentElement === sidebar) {
       sidebar.insertBefore(GPM_STATE.container, listContainer);
     } else {
-      // listContainer moved or detached — append to sidebar as fallback
-      sidebar.appendChild(GPM_STATE.container);
+      sidebar.insertBefore(GPM_STATE.container, sidebar.firstChild);
     }
   } catch (e) {
     gpmWarn('insertBefore failed, using appendChild fallback:', e.message);

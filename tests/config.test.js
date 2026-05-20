@@ -41,8 +41,8 @@ const gpmResetState = globalThis.gpmResetState;
 describe('GPM_CONFIG', () => {
   it('should have all required configuration keys', () => {
     expect(GPM_CONFIG.SIDEBAR_TIMEOUT).toBe(15000);
-    expect(GPM_CONFIG.CONTENT_TIMEOUT).toBe(10000);
-    expect(GPM_CONFIG.NAV_DELAY).toBe(600);
+    expect(GPM_CONFIG.CONTENT_TIMEOUT).toBe(3000);
+    expect(GPM_CONFIG.NAV_DELAY).toBe(300);
     expect(GPM_CONFIG.POLL_INTERVAL).toBe(500);
     expect(GPM_CONFIG.ASSIGNMENT_TIMEOUT).toBe(120000);
     expect(GPM_CONFIG.SYNC_DEBOUNCE).toBe(300);

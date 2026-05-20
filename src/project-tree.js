@@ -163,8 +163,7 @@ function _gpmCountAllChats(proj, childMap) {
 async function gpmRenderTree() {
   if (!GPM_STATE.container) return;
 
-  const projects = await GPMStorage.getProjects();
-  const chatMap = await GPMStorage.getChatMap();
+  const [projects, chatMap] = await Promise.all([GPMStorage.getProjects(), GPMStorage.getChatMap()]);
   const rootProjects = GPMStorage.getRootProjects(projects);
   const _childMap = _gpmBuildChildMap(projects);
 

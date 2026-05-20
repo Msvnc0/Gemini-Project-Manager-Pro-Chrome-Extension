@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.3.0 — Faster Initialization
+
+- **Perf:** Projects now inject immediately into sidebar even before chat links load (was silently aborting)
+- **Perf:** Sidebar content wait reduced from 10s to 3s — projects render into empty sidebar
+- **Perf:** Navigation re-inject delay reduced from 600ms to 300ms
+- **Perf:** Storage reads parallelized in render (getProjects + getChatMap)
+
 ## v1.2.9
 
 - **Fix:** Drag-drop chat title was stale — now reads live from DOM at drag time
