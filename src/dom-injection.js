@@ -489,21 +489,8 @@ function gpmInjectProjectSection(_sidebar) {
     }
   }
 
-  // Fallback: use _sidebar parameter or CSS selector when no chat links exist yet
   if (!sidebar) {
-    sidebar =
-      _sidebar ||
-      document.querySelector('nav') ||
-      document.querySelector('[role="navigation"]') ||
-      document.querySelector(GPM_SELECTORS.sidebar);
-    if (sidebar) {
-      gpmLog('Sidebar from fallback (no chat links):', sidebar.tagName, sidebar.className?.slice(0, 50));
-      listContainer = null;
-    }
-  }
-
-  if (!sidebar) {
-    gpmWarn('gpmInjectProjectSection: no sidebar found, aborting');
+    gpmWarn('gpmInjectProjectSection: no chat links in DOM yet, aborting');
     return;
   }
 

@@ -133,7 +133,7 @@ async function gpmInit() {
       gpmWarn('Style injection failed:', e);
     }
     try {
-      gpmInjectProjectSection(sidebar);
+      gpmInjectProjectSection();
     } catch (e) {
       gpmWarn('Project section injection failed:', e);
     }

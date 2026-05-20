@@ -202,9 +202,7 @@ function gpmCleanupObservers() {
 function gpmOnNavigate() {
   setTimeout(() => {
     if (!gpmIsContextValid()) return;
-    if (!document.querySelector('#gpm-project-section')) {
-      gpmInjectProjectSection();
-    }
+    gpmInjectProjectSection();
     gpmInjectQuickPromptTrigger();
   }, GPM_CONFIG.NAV_DELAY);
 }
@@ -598,6 +596,10 @@ function gpmObserveNewChats() {
           gpmEnhanceNativeChatItems();
         }, GPM_CONFIG.ENHANCE_DEBOUNCE);
         gpmScheduleAliasResolve();
+        // Re-inject project section if missing or not in sidebar (chat links now available)
+        if (!GPM_STATE.container || !GPM_STATE.container.isConnected) {
+          gpmInjectProjectSection();
+        }
       }
 
       if (hasNonGPMRemovals) {
