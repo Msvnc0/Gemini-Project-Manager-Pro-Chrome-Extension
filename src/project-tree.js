@@ -35,7 +35,11 @@ function gpmScheduleAliasResolve() {
 
       const currentAlias = chatMap[cid].alias || '';
       const isAutoResolved = chatMap[cid]._autoResolved || false;
-      const needsUpdate = !currentAlias || currentAlias === cid || isAutoResolved;
+      // Update logic:
+      // - If alias is empty/chatId → definitely needs a title
+      // - If alias is short (< 5 chars) → likely garbage, try to find better
+      // - If alias is auto-resolved → keep trying until we get a real title
+      const needsUpdate = !currentAlias || currentAlias === cid || currentAlias.length < 5 || isAutoResolved;
 
       if (needsUpdate) {
         // Radical title extraction: Gemini's DOM structure is unknown, so we try

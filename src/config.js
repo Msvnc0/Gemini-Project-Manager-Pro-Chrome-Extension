@@ -72,6 +72,7 @@ const GPM_STATE = {
   _lastSidebarChatCount: 0,
   _sidebarStabilizeTimer: null,
   _fallbackDeletionInterval: null, // Fallback deletion check (bypasses observer)
+  _aliasRecheckInterval: null, // Periodic alias recheck for lazy-loaded chat titles
   _searchQuery: '',
   spaObserversActive: false,
 };

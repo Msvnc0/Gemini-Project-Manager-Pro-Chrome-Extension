@@ -173,6 +173,13 @@ async function gpmInit() {
     }
 
     gpmLog('Initialization complete');
+
+    // Periyodik alias kontrolü: auto-resolved başlıkları tekrar kontrol et
+    // (Gemini chat başlıkları lazy-load eder, ilk seferde garbage yakalanabilir)
+    if (GPM_STATE._aliasRecheckInterval) clearInterval(GPM_STATE._aliasRecheckInterval);
+    GPM_STATE._aliasRecheckInterval = setInterval(() => {
+      if (GPM_STATE.initialized) gpmScheduleAliasResolve();
+    }, 30000);
   } finally {
     GPM_STATE._initializing = false;
   }
