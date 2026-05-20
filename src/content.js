@@ -179,7 +179,7 @@ async function gpmInit() {
     if (GPM_STATE._aliasRecheckInterval) clearInterval(GPM_STATE._aliasRecheckInterval);
     GPM_STATE._aliasRecheckInterval = setInterval(() => {
       if (GPM_STATE.initialized) gpmScheduleAliasResolve();
-    }, 30000);
+    }, 5000);
   } finally {
     GPM_STATE._initializing = false;
   }

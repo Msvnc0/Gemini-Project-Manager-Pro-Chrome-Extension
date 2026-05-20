@@ -35,11 +35,16 @@ function gpmScheduleAliasResolve() {
 
       const currentAlias = chatMap[cid].alias || '';
       const isAutoResolved = chatMap[cid]._autoResolved || false;
-      // Update logic:
-      // - If alias is empty/chatId → definitely needs a title
-      // - If alias is short (< 5 chars) → likely garbage, try to find better
-      // - If alias is auto-resolved → keep trying until we get a real title
-      const needsUpdate = !currentAlias || currentAlias === cid || currentAlias.length < 5 || isAutoResolved;
+      const isGarbage = [
+        'new chat',
+        'yeni sohbet',
+        'nouveau chat',
+        'neuer chat',
+        'nuova conversazione',
+        'nova conversa',
+      ].some((g) => currentAlias.toLowerCase().startsWith(g));
+      const needsUpdate =
+        !currentAlias || currentAlias === cid || currentAlias.length < 5 || isAutoResolved || isGarbage;
 
       if (needsUpdate) {
         // Radical title extraction: Gemini's DOM structure is unknown, so we try
@@ -674,8 +679,13 @@ function gpmCreateProjectRow(project, allProjects, chatMap, childMap) {
 
       await GPMStorage.assignChat(cleanId, project.id);
       if (chatTitle) {
-        const cm = await GPMStorage.getChatMap();
-        if (!cm[cleanId]?.alias) await GPMStorage.setChatAlias(cleanId, chatTitle);
+        const isGarbage = ['new chat', 'yeni sohbet', 'nouveau chat', 'neuer chat'].some((g) =>
+          chatTitle.toLowerCase().startsWith(g)
+        );
+        if (!isGarbage) {
+          const cm = await GPMStorage.getChatMap();
+          if (!cm[cleanId]?.alias) await GPMStorage.setChatAlias(cleanId, chatTitle);
+        }
       }
       gpmRenderTree();
     }
