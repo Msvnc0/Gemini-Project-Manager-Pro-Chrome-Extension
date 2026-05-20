@@ -613,6 +613,33 @@ function gpmObserveNewChats() {
 //  ENHANCE NATIVE CHAT ITEMS (Drag & Drop)
 // ══════════════════════════════════════
 
+function gpmExtractChatTitle(el) {
+  let title = '';
+  const ariaLabel = (el.getAttribute('aria-label') || '').trim();
+  if (ariaLabel && ariaLabel.length > 1 && !ariaLabel.startsWith('http')) title = ariaLabel;
+  if (!title) {
+    const tAttr = (el.getAttribute('title') || '').trim();
+    if (tAttr && tAttr.length > 1) title = tAttr;
+  }
+  if (!title) {
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
+    let node;
+    const texts = [];
+    while ((node = walker.nextNode())) {
+      const txt = node.textContent?.trim();
+      if (txt && txt.length > 2 && !/^\d+$/.test(txt) && !/^[\W_]+$/.test(txt)) texts.push(txt);
+    }
+    if (texts.length > 0) {
+      texts.sort((a, b) => b.length - a.length);
+      title = texts[0];
+    }
+  }
+  if (!title) title = (el.textContent || '').trim();
+  const GARBAGE = ['new chat', 'yeni sohbet', 'nouveau chat', 'neuer chat', 'nuova conversazione', 'nova conversa'];
+  if (GARBAGE.some((g) => title.toLowerCase().startsWith(g))) title = t('newChat') || 'New chat';
+  return title;
+}
+
 function gpmEnhanceNativeChatItems() {
   // Abort previous listeners to prevent memory leaks from DOM node recycling
   if (GPM_STATE.enhanceAbortController) {
@@ -642,44 +669,15 @@ function gpmEnhanceNativeChatItems() {
     // Make the whole <a> draggable
     item.draggable = true;
 
-    // Radical title extraction for new Gemini UI
-    let chatTitle = '';
-    // 1. aria-label
-    const ariaLabel = (item.getAttribute('aria-label') || '').trim();
-    if (ariaLabel && ariaLabel.length > 1 && !ariaLabel.startsWith('http')) chatTitle = ariaLabel;
-    // 2. title attribute
-    if (!chatTitle) {
-      const tAttr = (item.getAttribute('title') || '').trim();
-      if (tAttr && tAttr.length > 1) chatTitle = tAttr;
-    }
-    // 3. TreeWalker: all text nodes inside the link, pick longest plausible one
-    if (!chatTitle) {
-      const walker = document.createTreeWalker(item, NodeFilter.SHOW_TEXT, null);
-      let node;
-      const texts = [];
-      while ((node = walker.nextNode())) {
-        const txt = node.textContent?.trim();
-        if (txt && txt.length > 2 && !/^\d+$/.test(txt) && !/^[\W_]+$/.test(txt)) texts.push(txt);
-      }
-      if (texts.length > 0) {
-        texts.sort((a, b) => b.length - a.length);
-        chatTitle = texts[0];
-      }
-    }
-    // 4. textContent fallback
-    if (!chatTitle) chatTitle = (item.textContent || '').trim();
-    // Filter garbage
-    const GARBAGE = ['new chat', 'yeni sohbet', 'nouveau chat', 'neuer chat', 'nuova conversazione', 'nova conversa'];
-    if (GARBAGE.some((g) => chatTitle.toLowerCase().startsWith(g))) chatTitle = t('newChat') || 'New chat';
-
     item.addEventListener(
       'dragstart',
       (e) => {
         e.stopPropagation();
-        gpmLog('Drag started for chat:', chatId, 'title:', chatTitle);
+        const liveTitle = gpmExtractChatTitle(item);
+        gpmLog('Drag started for chat:', chatId, 'title:', liveTitle);
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/gpm-chat-id', chatId);
-        e.dataTransfer.setData('text/gpm-chat-title', chatTitle);
+        e.dataTransfer.setData('text/gpm-chat-title', liveTitle);
         e.dataTransfer.setData('text/plain', chatId);
         item.style.opacity = '0.5';
       },
