@@ -276,7 +276,7 @@ async function gpmRenderTree() {
   });
 
   // ── Search filter helper (with match source tracking + cache for performance) ──
-  const searchQuery = (GPM_STATE._searchQuery || '').toLowerCase();
+  const searchQuery = (GPM_STATE._searchQuery || '').trim().toLowerCase();
   const matchCache = new Map();
 
   function projectMatchesSearch(project, query) {
@@ -386,7 +386,7 @@ async function gpmRenderTree() {
   searchInput.addEventListener('input', () => {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(() => {
-      GPM_STATE._searchQuery = searchInput.value.trim();
+      GPM_STATE._searchQuery = searchInput.value;
       gpmRenderTree();
       // Re-focus and restore cursor after render
       setTimeout(() => {
@@ -427,7 +427,7 @@ function gpmCreateProjectRow(project, allProjects, chatMap, childMap) {
   const frag = document.createDocumentFragment();
   const children = allProjects.filter((p) => p.parentId === project.id);
   const chatIds = project.chatIds || [];
-  const activeQuery = (GPM_STATE._searchQuery || '').toLowerCase();
+  const activeQuery = (GPM_STATE._searchQuery || '').trim().toLowerCase();
 
   // ── Main row ──
   const row = document.createElement('div');
@@ -731,7 +731,7 @@ function gpmCreateChatRow(chatId, mapping, project, allProjects) {
 
   const label = document.createElement('span');
   label.setAttribute('data-gpm', 'chat-label');
-  const chatSearchQuery = (GPM_STATE._searchQuery || '').toLowerCase();
+  const chatSearchQuery = (GPM_STATE._searchQuery || '').trim().toLowerCase();
   if (chatSearchQuery) {
     label.appendChild(gpmHighlightText(alias, chatSearchQuery));
   } else {
