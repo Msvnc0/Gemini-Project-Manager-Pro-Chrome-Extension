@@ -38,7 +38,20 @@ function gpmScheduleAliasResolve() {
       const needsUpdate = !currentAlias || currentAlias === cid || isAutoResolved;
 
       if (needsUpdate) {
-        const title = (link.textContent || '').trim();
+        // Robust title extraction for new Gemini UI:
+        // 1. Prefer aria-label on the link (Gemini sets these now)
+        // 2. Fall back to child elements with conversation title data-test-id
+        // 3. Legacy textContent fallback
+        let title = (link.getAttribute('aria-label') || '').trim();
+        if (!title) {
+          const titleEl =
+            link.querySelector('[data-test-id="conversation-title"]') ||
+            link.querySelector('.chat-title, .conversation-title, .title');
+          if (titleEl) title = (titleEl.textContent || '').trim();
+        }
+        if (!title) {
+          title = (link.textContent || '').trim();
+        }
         if (title && title !== cid && title !== currentAlias) {
           chatMap[cid].alias = title;
           chatMap[cid]._autoResolved = true;

@@ -655,7 +655,7 @@ function gpmObserveNewChats() {
     _gpmWaitForSidebarStabilize();
   }
 
-  let sidebar =
+  const sidebar =
     document.querySelector(GPM_SELECTORS.sidebar) ||
     _gpmStructuralDiscovery.sidebar() ||
     (() => {
@@ -667,21 +667,40 @@ function gpmObserveNewChats() {
     let enhanceTimeout = null;
 
     _newChatsObserver = new MutationObserver((mutations) => {
-      const relevant = mutations.some((m) => {
-        const target = m.target;
-        if (target.closest && target.closest('[data-gpm]')) return false;
-        if (target.dataset && target.dataset.gpm) return false;
-        return true;
+      const hasNonGPMRemovals = mutations.some((m) => {
+        for (const node of m.removedNodes) {
+          if (node.nodeType === 1) {
+            if (node.dataset && node.dataset.gpm) continue;
+            if (node.closest && node.closest('[data-gpm]')) continue;
+            // Chat link veya içerdiği bir element mi?
+            if (node.tagName === 'A' && node.getAttribute('href')?.startsWith('/app/')) return true;
+            if (node.querySelector && node.querySelector('a[href^="/app/"]')) return true;
+          }
+        }
+        return false;
       });
-      if (!relevant) return;
 
-      clearTimeout(enhanceTimeout);
-      enhanceTimeout = setTimeout(() => {
-        gpmEnhanceNativeChatItems();
-      }, GPM_CONFIG.ENHANCE_DEBOUNCE);
+      const hasRelevantAdditions = mutations.some((m) => {
+        for (const node of m.addedNodes) {
+          if (node.nodeType === 1) {
+            if (node.dataset && node.dataset.gpm) continue;
+            if (node.closest && node.closest('[data-gpm]')) continue;
+            if (node.tagName === 'A' && node.getAttribute('href')?.startsWith('/app/')) return true;
+            if (node.querySelector && node.querySelector('a[href^="/app/"]')) return true;
+          }
+        }
+        return false;
+      });
 
-      const hasRemovals = mutations.some((m) => m.removedNodes.length > 0);
-      if (hasRemovals) {
+      if (hasRelevantAdditions) {
+        clearTimeout(enhanceTimeout);
+        enhanceTimeout = setTimeout(() => {
+          gpmEnhanceNativeChatItems();
+        }, GPM_CONFIG.ENHANCE_DEBOUNCE);
+        gpmScheduleAliasResolve();
+      }
+
+      if (hasNonGPMRemovals) {
         gpmDetectDeletedChats();
       }
     });
@@ -723,8 +742,14 @@ function gpmEnhanceNativeChatItems() {
     // Make the whole <a> draggable
     item.draggable = true;
 
-    // Get the chat title from the link text
-    const chatTitle = (item.textContent || '').trim();
+    // Robust title extraction for new Gemini UI
+    const chatTitle =
+      (item.getAttribute('aria-label') || '').trim() ||
+      (() => {
+        const el = item.querySelector('[data-test-id="conversation-title"], .chat-title, .conversation-title, .title');
+        return el ? (el.textContent || '').trim() : '';
+      })() ||
+      (item.textContent || '').trim();
 
     item.addEventListener(
       'dragstart',
