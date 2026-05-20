@@ -288,7 +288,16 @@ function gpmDetectDeletedChats() {
   GPM_STATE._deletionCheckTimer = setTimeout(async () => {
     if (!gpmIsContextValid()) return;
 
-    const sidebar = document.querySelector(GPM_SELECTORS.sidebar);
+    const sidebar =
+      document.querySelector(GPM_SELECTORS.sidebar) ||
+      (typeof _gpmStructuralDiscovery !== 'undefined' && _gpmStructuralDiscovery.sidebar
+        ? _gpmStructuralDiscovery.sidebar()
+        : null) ||
+      (() => {
+        const first = document.querySelector('a[href^="/app/"]');
+        for (let n = first; n; n = n.parentElement) if (n.children.length >= 2) return n;
+        return null;
+      })();
     if (!sidebar) return;
 
     const sidebarLinks = sidebar.querySelectorAll('a[href^="/app/"]');
@@ -456,7 +465,16 @@ async function gpmCleanupAfterImport(maxRetries = 5, retryDelay = 3000) {
   if (!gpmIsContextValid()) return 0;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    const sidebar = document.querySelector(GPM_SELECTORS.sidebar);
+    const sidebar =
+      document.querySelector(GPM_SELECTORS.sidebar) ||
+      (typeof _gpmStructuralDiscovery !== 'undefined' && _gpmStructuralDiscovery.sidebar
+        ? _gpmStructuralDiscovery.sidebar()
+        : null) ||
+      (() => {
+        const first = document.querySelector('a[href^="/app/"]');
+        for (let n = first; n; n = n.parentElement) if (n.children.length >= 2) return n;
+        return null;
+      })();
     if (!sidebar) {
       gpmLog(`Cleanup attempt ${attempt}/${maxRetries}: Sidebar not found, waiting...`);
       if (attempt < maxRetries) {
@@ -637,7 +655,14 @@ function gpmObserveNewChats() {
     _gpmWaitForSidebarStabilize();
   }
 
-  const sidebar = document.querySelector(GPM_SELECTORS.sidebar);
+  let sidebar =
+    document.querySelector(GPM_SELECTORS.sidebar) ||
+    _gpmStructuralDiscovery.sidebar() ||
+    (() => {
+      const first = document.querySelector('a[href^="/app/"]');
+      for (let n = first; n; n = n.parentElement) if (n.children.length >= 2) return n;
+      return null;
+    })();
   if (sidebar) {
     let enhanceTimeout = null;
 

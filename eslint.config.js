@@ -20,6 +20,7 @@ export default [
         t: 'readonly',
         GPMStorage: 'readonly',
         GPM_SELECTORS: 'readonly',
+        _gpmStructuralDiscovery: 'readonly',
         gpmQuerySelector: 'readonly',
         gpmClearSelectorCache: 'readonly',
         GPMUI: 'readonly',
