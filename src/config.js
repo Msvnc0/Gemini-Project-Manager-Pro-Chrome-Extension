@@ -66,12 +66,12 @@ const GPM_STATE = {
   _qpLastToolbarMethod: null, // Last successful toolbar placement method (prevents method-flapping flicker)
   _initializing: false, // Prevents concurrent gpmInit() calls from racing
   _deletionCheckTimer: null,
-  _pendingDeletedChatIds: null,
   _deletionPhaseCount: 0,
   _sidebarStabilized: false,
   _sidebarStableCount: 0,
   _lastSidebarChatCount: 0,
   _sidebarStabilizeTimer: null,
+  _fallbackDeletionInterval: null, // Fallback deletion check (bypasses observer)
   _searchQuery: '',
   spaObserversActive: false,
 };
