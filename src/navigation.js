@@ -214,9 +214,17 @@ function gpmOnNavigate() {
 // ══════════════════════════════════════
 
 function _gpmGetSidebarChatCount() {
-  const sidebar = document.querySelector(GPM_SELECTORS.sidebar);
-  if (!sidebar) return 0;
-  return sidebar.querySelectorAll('a[href^="/app/"]').length;
+  // Direct document count — sidebar container discovery is fragile on the new Gemini UI.
+  // We count all /app/ links on the page; false positives are harmless because stabilization
+  // only cares about the *count* trending to a stable value.
+  const links = document.querySelectorAll('a[href^="/app/"]');
+  let count = 0;
+  for (let i = 0; i < links.length; i++) {
+    if (extractChatIdFromUrl(links[i].getAttribute('href') || '')) {
+      count++;
+    }
+  }
+  return count;
 }
 
 function _gpmWaitForSidebarStabilize() {
