@@ -60,14 +60,24 @@ const _gpmSelectorCache = {};
  */
 const _gpmStructuralDiscovery = {
   /**
-   * Find sidebar by structural heuristics:
-   *   - Contains <a href="/app/..."> links (chat items)
-   *   - Is a scrollable container
-   *   - Contains section labels like "Chats", "Gems"
+   * Find sidebar by structural heuristics (new Gemini UI compatible).
+   * Climbs up from the first chat link to find the containing list/sidebar.
    */
   sidebar() {
-    // Heuristic: find the scrollable container that holds chat links
     const chatLink = document.querySelector('a[href^="/app/"]');
+    if (chatLink) {
+      let candidate = chatLink.parentElement;
+      // Climb up: look for widest element with multiple children (the list)
+      for (let i = 0; i < 15; i++) {
+        if (!candidate || candidate === document.body) break;
+        if (candidate.children.length >= 2) {
+          if (typeof gpmLog === 'function') gpmLog('Sidebar discovered via structural discovery (chat-link parent)');
+          return candidate;
+        }
+        candidate = candidate.parentElement;
+      }
+    }
+    // Legacy fallback: scrollable ancestor
     if (chatLink) {
       let el = chatLink.parentElement;
       for (let i = 0; i < 10; i++) {
@@ -76,8 +86,7 @@ const _gpmStructuralDiscovery = {
         const isScrollable = style.overflowY === 'auto' || style.overflowY === 'scroll';
         const isReasonableSize = el.clientHeight > 200;
         if (isScrollable && isReasonableSize) {
-          if (typeof gpmLog === 'function')
-            gpmLog('Sidebar discovered via structural search (scrollable ancestor of chat link)');
+          if (typeof gpmLog === 'function') gpmLog('Sidebar discovered via structural search (scrollable ancestor)');
           return el;
         }
         el = el.parentElement;
