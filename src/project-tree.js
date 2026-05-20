@@ -38,21 +38,58 @@ function gpmScheduleAliasResolve() {
       const needsUpdate = !currentAlias || currentAlias === cid || isAutoResolved;
 
       if (needsUpdate) {
-        // Robust title extraction for new Gemini UI:
-        // 1. Prefer aria-label on the link (Gemini sets these now)
-        // 2. Fall back to child elements with conversation title data-test-id
-        // 3. Legacy textContent fallback
-        let title = (link.getAttribute('aria-label') || '').trim();
+        // Radical title extraction: Gemini's DOM structure is unknown, so we try
+        // every possible source. Stop at the first non-empty, non-garbage value.
+        let title = '';
+
+        // 1. aria-label on the link itself (Gemini often sets these)
+        const ariaLabel = (link.getAttribute('aria-label') || '').trim();
+        if (ariaLabel && ariaLabel.length > 1 && !ariaLabel.startsWith('http')) title = ariaLabel;
+
+        // 2. title attribute
         if (!title) {
-          const titleEl =
-            link.querySelector('[data-test-id="conversation-title"]') ||
-            link.querySelector('.chat-title, .conversation-title, .title');
-          if (titleEl) title = (titleEl.textContent || '').trim();
+          const tAttr = (link.getAttribute('title') || '').trim();
+          if (tAttr && tAttr.length > 1) title = tAttr;
         }
+
+        // 3. Any child element with text > 2 chars that isn't an icon/number
+        if (!title) {
+          const walker = document.createTreeWalker(link, NodeFilter.SHOW_TEXT, null);
+          let node;
+          const texts = [];
+          while ((node = walker.nextNode())) {
+            const txt = node.textContent?.trim();
+            if (txt && txt.length > 2 && !/^\d+$/.test(txt) && !/^[\W_]+$/.test(txt)) {
+              texts.push(txt);
+            }
+          }
+          // Prefer the longest plausible text node (usually the title, not icon labels)
+          if (texts.length > 0) {
+            texts.sort((a, b) => b.length - a.length);
+            title = texts[0];
+          }
+        }
+
+        // 4. Direct textContent as absolute last resort (often polluted on new UI)
         if (!title) {
           title = (link.textContent || '').trim();
         }
-        if (title && title !== cid && title !== currentAlias) {
+
+        // Filter out known garbage strings
+        const GARBAGE = [
+          'new chat',
+          'yeni sohbet',
+          'nouveau chat',
+          'neuer chat',
+          'nuova conversazione',
+          'nova conversa',
+        ];
+        const lowerTitle = title.toLowerCase();
+        if (GARBAGE.some((g) => lowerTitle === g || lowerTitle.startsWith(g + ' '))) {
+          title = '';
+        }
+
+        if (title && title !== cid && title !== currentAlias && title.length > 1) {
           chatMap[cid].alias = title;
           chatMap[cid]._autoResolved = true;
           aliasUpdated = true;
