@@ -294,10 +294,10 @@ const GPMIntegrityCheck = (() => {
     gpmError('No valid backup available, creating emergency backup and resetting');
 
     try {
-      const currentData = await chrome.storage.local.get(null);
-      const bytesUsed = await chrome.storage.local.getBytesInUse(null);
+      const currentData = await browser.storage.local.get(null);
+      const bytesUsed = await browser.storage.local.getBytesInUse(null);
       if (bytesUsed <= 8 * 1024 * 1024) {
-        await chrome.storage.local.set({
+        await browser.storage.local.set({
           gpm_backup_current: {
             type: 'emergency',
             data: currentData,

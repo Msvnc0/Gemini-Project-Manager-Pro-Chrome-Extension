@@ -96,15 +96,15 @@ const GPMStorage = (() => {
     const currentVersion = stored || 0;
 
     if (currentVersion < GPM_SCHEMA_VERSION) {
-      const allData = await chrome.storage.local.get(null);
+      const allData = await browser.storage.local.get(null);
       const migratedData = await runMigrations(allData, currentVersion);
 
       const keysToRemove = GPM_LEGACY_KEYS.filter((k) => migratedData[k] === undefined && allData[k] !== undefined);
       if (keysToRemove.length > 0) {
-        await chrome.storage.local.remove(keysToRemove);
+        await browser.storage.local.remove(keysToRemove);
       }
 
-      await chrome.storage.local.set(migratedData);
+      await browser.storage.local.set(migratedData);
       gpmLog('Migrated from v' + currentVersion + ' to ' + GPM_SCHEMA_VERSION);
     }
   }
@@ -114,7 +114,7 @@ const GPMStorage = (() => {
   async function _acquireCrossTabLock(maxRetries = 5, delay = 200) {
     for (let i = 0; i < maxRetries; i++) {
       try {
-        const resp = await chrome.runtime.sendMessage({ type: 'GPM_ACQUIRE_LOCK' });
+        const resp = await browser.runtime.sendMessage({ type: 'GPM_ACQUIRE_LOCK' });
         if (resp && resp.granted) return true;
       } catch (_) {}
       await new Promise((r) => setTimeout(r, delay));
@@ -124,7 +124,7 @@ const GPMStorage = (() => {
 
   async function _releaseCrossTabLock() {
     try {
-      await chrome.runtime.sendMessage({ type: 'GPM_RELEASE_LOCK' });
+      await browser.runtime.sendMessage({ type: 'GPM_RELEASE_LOCK' });
     } catch (_) {}
   }
 
@@ -147,7 +147,7 @@ const GPMStorage = (() => {
 
   async function _get(key) {
     try {
-      const result = await chrome.storage.local.get(key);
+      const result = await browser.storage.local.get(key);
       return result[key];
     } catch (e) {
       if (e.message?.includes('Extension context invalidated')) return undefined;
@@ -157,7 +157,7 @@ const GPMStorage = (() => {
 
   async function _set(key, value) {
     try {
-      await chrome.storage.local.set({ [key]: value });
+      await browser.storage.local.set({ [key]: value });
     } catch (e) {
       if (e.message?.includes('Extension context invalidated')) {
         gpmWarn('Write skipped — extension context invalidated');
@@ -169,7 +169,7 @@ const GPMStorage = (() => {
 
   async function _setBulk(data) {
     try {
-      await chrome.storage.local.set(data);
+      await browser.storage.local.set(data);
     } catch (e) {
       if (e.message?.includes('Extension context invalidated')) {
         gpmWarn('Write skipped — extension context invalidated');
@@ -183,7 +183,7 @@ const GPMStorage = (() => {
 
   async function _checkQuota() {
     try {
-      const bytesUsed = await chrome.storage.local.getBytesInUse(null);
+      const bytesUsed = await browser.storage.local.getBytesInUse(null);
       return bytesUsed / (10 * 1024 * 1024);
     } catch (_) {
       return 0;
@@ -196,7 +196,7 @@ const GPMStorage = (() => {
       gpmLog('Quota usage', Math.round(usage * 100) + '%, skipping backup');
       return;
     }
-    await chrome.storage.local.set({
+    await browser.storage.local.set({
       gpm_backup_current: {
         type,
         data: {
@@ -531,7 +531,7 @@ const GPMStorage = (() => {
 
   async function clearAll() {
     return _withLock(async () => {
-      await chrome.storage.local.set({
+      await browser.storage.local.set({
         gpm_projects: [],
         gpm_chatMap: {},
         gpm_quickPrompts: [],

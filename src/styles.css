@@ -103,6 +103,7 @@
   padding: 0;
   -webkit-appearance: none;
   appearance: none;
+  appearance: none;
 }
 
 .gpm-icon-btn:hover {
@@ -841,6 +842,12 @@
 
 :host ::-webkit-scrollbar-thumb:hover {
   background: var(--gpm-text-secondary);
+}
+
+/* Firefox scrollbar fallback */
+:host {
+  scrollbar-width: thin;
+  scrollbar-color: var(--gpm-border) transparent;
 }
 
 /* ═══════════════════════════════════════════════════════

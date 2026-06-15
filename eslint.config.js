@@ -11,7 +11,8 @@ export default [
       sourceType: 'script', // Chrome extension content scripts are not ES modules
       globals: {
         ...globals.browser,
-        // Chrome Extension APIs
+        // Cross-browser Extension APIs (browser = Firefox native, chrome = alias via polyfill)
+        browser: 'readonly',
         chrome: 'readonly',
         // GPM globals (loaded via content_scripts in order)
         GPM_STRINGS: 'readonly',

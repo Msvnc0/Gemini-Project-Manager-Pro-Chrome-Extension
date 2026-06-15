@@ -155,7 +155,7 @@ function gpmResetState() {
 // ── Extension context check ──
 function gpmIsContextValid() {
   try {
-    return !!chrome.runtime?.id;
+    return !!browser.runtime?.id;
   } catch (e) {
     return false;
   }

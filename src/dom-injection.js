@@ -336,7 +336,7 @@ function gpmCreateModalHost() {
   try {
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = chrome.runtime.getURL('src/styles.css');
+    link.href = browser.runtime.getURL('src/styles.css');
     GPM_STATE.modalRoot.appendChild(link);
   } catch (e) {
     // Fallback: inject styles inline if extension context is invalidated

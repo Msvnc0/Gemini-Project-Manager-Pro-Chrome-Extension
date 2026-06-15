@@ -10,7 +10,7 @@ const GPMFavoritesManager = (() => {
 
   async function getFavorites() {
     try {
-      const result = await chrome.storage.local.get(FAVORITES_KEY);
+      const result = await browser.storage.local.get(FAVORITES_KEY);
       return result[FAVORITES_KEY] || [];
     } catch (e) {
       return [];
@@ -19,7 +19,7 @@ const GPMFavoritesManager = (() => {
 
   async function saveFavorites(favorites) {
     try {
-      await chrome.storage.local.set({ [FAVORITES_KEY]: favorites });
+      await browser.storage.local.set({ [FAVORITES_KEY]: favorites });
     } catch (e) {
       if (typeof gpmError === 'function') gpmError('[GPM Favorites] Save failed:', e);
     }

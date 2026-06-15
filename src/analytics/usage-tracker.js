@@ -19,7 +19,7 @@ const GPMUsageTracker = (() => {
 
   async function getAnalytics() {
     try {
-      const { [ANALYTICS_KEY]: analytics } = await chrome.storage.local.get(ANALYTICS_KEY);
+      const { [ANALYTICS_KEY]: analytics } = await browser.storage.local.get(ANALYTICS_KEY);
       return (
         analytics || {
           projectAccess: {},
@@ -40,7 +40,7 @@ const GPMUsageTracker = (() => {
 
   async function saveAnalytics(analytics) {
     try {
-      await chrome.storage.local.set({ [ANALYTICS_KEY]: analytics });
+      await browser.storage.local.set({ [ANALYTICS_KEY]: analytics });
     } catch (_) {}
   }
 

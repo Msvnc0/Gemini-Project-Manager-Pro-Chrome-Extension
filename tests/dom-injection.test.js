@@ -50,13 +50,14 @@ globalThis.gpmResetState = vi.fn(() => {
   GPM_STATE.styleInjected = false;
 });
 
-// Mock chrome.runtime.getURL
-globalThis.chrome = {
+// Mock browser.runtime.getURL (cross-browser: browser = Firefox native, chrome = alias via polyfill)
+globalThis.browser = {
   runtime: {
     id: 'mock-id',
     getURL: vi.fn((path) => `chrome-extension://mock/${path}`)
   }
 };
+globalThis.chrome = globalThis.browser;
 
 const domInjectionCode = readFileSync(resolve('src/dom-injection.js'), 'utf-8');
 

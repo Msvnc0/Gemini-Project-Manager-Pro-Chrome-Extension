@@ -39,7 +39,7 @@ async function gpmInit() {
   try {
     gpmLog(
       'gpmInit() started - v' +
-        (typeof chrome !== 'undefined' && chrome.runtime?.getManifest ? chrome.runtime.getManifest().version : 'dev')
+        (typeof browser !== 'undefined' && browser.runtime?.getManifest ? browser.runtime.getManifest().version : 'dev')
     );
 
     // ── Start sidebar wait immediately (usually the longest pole) ──
@@ -199,7 +199,7 @@ function gpmScheduleSyncRender() {
 }
 
 try {
-  chrome.runtime.onMessage.addListener((msg, _sender, _sendResponse) => {
+  browser.runtime.onMessage.addListener((msg, _sender, _sendResponse) => {
     if (!gpmIsContextValid()) return;
 
     if (msg.type === 'GPM_SYNC') {
@@ -216,8 +216,8 @@ try {
 }
 
 try {
-  if (chrome.storage?.onChanged?.addListener) {
-    chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (browser.storage?.onChanged?.addListener) {
+    browser.storage.onChanged.addListener((changes, areaName) => {
       if (!gpmIsContextValid() || areaName !== 'local') return;
 
       const relevantKeys = ['gpm_projects', 'gpm_chatMap', 'gpm_quickPrompts', 'gpm_settings'];
@@ -228,7 +228,7 @@ try {
 
       if ('gpm_lastExtensionUpdate' in changes) {
         const updateInfo = changes.gpm_lastExtensionUpdate?.newValue;
-        if (updateInfo?.version === chrome.runtime.getManifest().version) {
+        if (updateInfo?.version === browser.runtime.getManifest().version) {
           gpmLog('Extension updated to v' + updateInfo.version);
           GPMContextRecovery.showRecoveryUI();
         }

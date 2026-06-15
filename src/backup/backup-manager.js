@@ -66,7 +66,7 @@ const GPMBackupManager = (() => {
             backups.shift();
           }
 
-          await chrome.storage.local.set({ [BACKUP_KEY]: backups });
+          await browser.storage.local.set({ [BACKUP_KEY]: backups });
 
           gpmLog('Backup created:', backup.id, 'trigger:', trigger, 'stats:', backup.stats);
           resolve(backup);
@@ -81,7 +81,7 @@ const GPMBackupManager = (() => {
 
   async function getBackups() {
     try {
-      const { [BACKUP_KEY]: backups = [] } = await chrome.storage.local.get(BACKUP_KEY);
+      const { [BACKUP_KEY]: backups = [] } = await browser.storage.local.get(BACKUP_KEY);
       return backups;
     } catch (e) {
       gpmError('Failed to get backups:', e);
@@ -127,7 +127,7 @@ const GPMBackupManager = (() => {
     try {
       const backups = await getBackups();
       const filtered = backups.filter((b) => b.id !== backupId);
-      await chrome.storage.local.set({ [BACKUP_KEY]: filtered });
+      await browser.storage.local.set({ [BACKUP_KEY]: filtered });
       gpmLog('Backup deleted:', backupId);
       return true;
     } catch (e) {

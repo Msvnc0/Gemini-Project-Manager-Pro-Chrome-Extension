@@ -12,11 +12,13 @@
     "format:check": "prettier --check \"src/**/*.{js,css,json}\"",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "build:firefox": "node scripts/build-firefox.cjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
     "@vitest/coverage-v8": "^3.0.0",
+    "archiver": "^8.0.0",
     "eslint": "^9.0.0",
     "eslint-config-prettier": "^10.0.0",
     "globals": "^15.0.0",

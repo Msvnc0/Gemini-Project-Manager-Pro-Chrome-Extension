@@ -134,25 +134,25 @@ describe('extractChatIdFromUrl()', () => {
 // ══════════════════════════════════════
 
 describe('gpmIsContextValid()', () => {
-  it('should return true when chrome.runtime.id exists', () => {
+  it('should return true when browser.runtime.id exists', () => {
     expect(gpmIsContextValid()).toBe(true);
   });
 
-  it('should return false when chrome.runtime.id is undefined', () => {
-    const originalId = chrome.runtime.id;
-    chrome.runtime.id = undefined;
+  it('should return false when browser.runtime.id is undefined', () => {
+    const originalId = browser.runtime.id;
+    browser.runtime.id = undefined;
     expect(gpmIsContextValid()).toBe(false);
-    chrome.runtime.id = originalId;
+    browser.runtime.id = originalId;
   });
 
-  it('should return false when chrome.runtime throws', () => {
-    const originalRuntime = chrome.runtime;
-    Object.defineProperty(chrome, 'runtime', {
+  it('should return false when browser.runtime throws', () => {
+    const originalRuntime = browser.runtime;
+    Object.defineProperty(browser, 'runtime', {
       get() { throw new Error('Extension context invalidated'); },
       configurable: true
     });
     expect(gpmIsContextValid()).toBe(false);
-    Object.defineProperty(chrome, 'runtime', {
+    Object.defineProperty(browser, 'runtime', {
       value: originalRuntime,
       configurable: true,
       writable: true

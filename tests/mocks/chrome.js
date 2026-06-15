@@ -236,6 +236,7 @@ function resetAllMocks() {
 
 function installChromeMock() {
   globalThis.chrome = chromeMock;
+  globalThis.browser = chromeMock;
 }
 
 function setMockStorageSnapshot(data) {

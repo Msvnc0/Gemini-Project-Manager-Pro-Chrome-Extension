@@ -1,8 +1,8 @@
 /**
  * sync-manager.js — Cross-Device Synchronization Manager
  *
- * Manages sync metadata across devices using chrome.storage.sync.
- * Full data stays in chrome.storage.local (unlimited), but metadata
+ * Manages sync metadata across devices using browser.storage.sync.
+ * Full data stays in browser.storage.local (unlimited), but metadata
  * (last modified, device ID, version) syncs across devices.
  *
  * Conflict Detection:
@@ -18,16 +18,16 @@ const GPMSyncManager = (() => {
   let syncTimer = null;
 
   async function getDeviceId() {
-    let { gpm_deviceId } = await chrome.storage.local.get('gpm_deviceId');
+    let { gpm_deviceId } = await browser.storage.local.get('gpm_deviceId');
     if (!gpm_deviceId) {
       gpm_deviceId = crypto.randomUUID();
-      await chrome.storage.local.set({ gpm_deviceId });
+      await browser.storage.local.set({ gpm_deviceId });
     }
     return gpm_deviceId;
   }
 
   async function getLocalMeta() {
-    const meta = await chrome.storage.local.get('gpm_localMeta');
+    const meta = await browser.storage.local.get('gpm_localMeta');
     return (
       meta.gpm_localMeta || {
         lastModified: 0,
@@ -43,13 +43,13 @@ const GPMSyncManager = (() => {
       deviceId: await getDeviceId(),
       version: await calculateDataVersion(),
     };
-    await chrome.storage.local.set({ gpm_localMeta: meta });
+    await browser.storage.local.set({ gpm_localMeta: meta });
     return meta;
   }
 
   async function getSyncMeta() {
     try {
-      const result = await chrome.storage.sync.get(SYNC_META_KEY);
+      const result = await browser.storage.sync.get(SYNC_META_KEY);
       return result[SYNC_META_KEY] || null;
     } catch (e) {
       gpmWarn('[GPM Sync] Could not read sync meta:', e);
@@ -59,7 +59,7 @@ const GPMSyncManager = (() => {
 
   async function setSyncMeta(meta) {
     try {
-      await chrome.storage.sync.set({ [SYNC_META_KEY]: meta });
+      await browser.storage.sync.set({ [SYNC_META_KEY]: meta });
       return true;
     } catch (e) {
       gpmError('[GPM Sync] Could not write sync meta:', e);

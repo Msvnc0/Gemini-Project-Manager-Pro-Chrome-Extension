@@ -3,7 +3,7 @@
  * Handles installation defaults, schema migration, and message routing.
  *
  * Schema Versioning:
- *   gpm_schemaVersion — current schema version number stored in chrome.storage.local
+ *   gpm_schemaVersion — current schema version number stored in browser.storage.local
  *   CURRENT_SCHEMA_VERSION — target version defined in code
  *   GPM_MIGRATIONS — ordered list of migration functions
  */
@@ -114,11 +114,11 @@ async function gpmRunMigrations(currentVersion) {
 
   if (applicable.length === 0) {
     console.log('[GPM] No migrations needed (schema v' + currentVersion + ' → v' + CURRENT_SCHEMA_VERSION + ')');
-    await chrome.storage.local.set({ gpm_schemaVersion: CURRENT_SCHEMA_VERSION });
+    await browser.storage.local.set({ gpm_schemaVersion: CURRENT_SCHEMA_VERSION });
     return;
   }
 
-  const allData = await chrome.storage.local.get(null);
+  const allData = await browser.storage.local.get(null);
 
   console.log(
     '[GPM] Running',
@@ -127,9 +127,9 @@ async function gpmRunMigrations(currentVersion) {
     'to v' + CURRENT_SCHEMA_VERSION
   );
 
-  const bytesUsed = await chrome.storage.local.getBytesInUse(null);
+  const bytesUsed = await browser.storage.local.getBytesInUse(null);
   if (bytesUsed <= 8 * 1024 * 1024) {
-    await chrome.storage.local.set({
+    await browser.storage.local.set({
       gpm_backup_current: {
         type: 'pre_migration',
         data: {
@@ -159,16 +159,21 @@ async function gpmRunMigrations(currentVersion) {
       data = migration.migrate(data);
     } catch (err) {
       console.error('[GPM] Migration failed (v' + migration.fromVersion + '→v' + migration.toVersion + '):', err);
-      await chrome.storage.local.set({
+      await browser.storage.local.set({
         gpm_schemaVersion: currentVersion,
-        gpm_migration_failed: { from: currentVersion, to: migration.toVersion, error: err.message, timestamp: Date.now() },
+        gpm_migration_failed: {
+          from: currentVersion,
+          to: migration.toVersion,
+          error: err.message,
+          timestamp: Date.now(),
+        },
       });
       return;
     }
   }
 
   // Write migrated data
-  await chrome.storage.local.set({
+  await browser.storage.local.set({
     gpm_projects: data.gpm_projects,
     gpm_chatMap: data.gpm_chatMap,
     gpm_quickPrompts: data.gpm_quickPrompts,
@@ -192,17 +197,17 @@ async function gpmRunMigrations(currentVersion) {
   ];
   const keysToRemove = legacyKeys.filter((k) => allData[k] !== undefined);
   if (keysToRemove.length > 0) {
-    await chrome.storage.local.remove(keysToRemove);
+    await browser.storage.local.remove(keysToRemove);
     console.log('[GPM] Cleaned up', keysToRemove.length, 'legacy key(s)');
   }
 
   console.log('[GPM] Migration complete — now at schema v' + CURRENT_SCHEMA_VERSION);
 }
 
-chrome.runtime.onInstalled.addListener(async (details) => {
+browser.runtime.onInstalled.addListener(async (details) => {
   try {
     if (details.reason === 'install') {
-      await chrome.storage.local.set({
+      await browser.storage.local.set({
         gpm_projects: [],
         gpm_chatMap: {},
         gpm_quickPrompts: [],
@@ -213,7 +218,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     } else if (details.reason === 'update') {
       await createUpdateBackup(details.previousVersion);
 
-      const result = await chrome.storage.local.get('gpm_schemaVersion');
+      const result = await browser.storage.local.get('gpm_schemaVersion');
       const storedVersion = result.gpm_schemaVersion || 0;
       if (storedVersion < CURRENT_SCHEMA_VERSION) {
         await gpmRunMigrations(storedVersion);
@@ -233,15 +238,15 @@ chrome.runtime.onInstalled.addListener(async (details) => {
  */
 async function createUpdateBackup(previousVersion) {
   try {
-    const allData = await chrome.storage.local.get(null);
+    const allData = await browser.storage.local.get(null);
 
-    const bytesUsed = await chrome.storage.local.getBytesInUse(null);
+    const bytesUsed = await browser.storage.local.getBytesInUse(null);
     if (bytesUsed > 8 * 1024 * 1024) {
       console.log('[GPM] Skipping update backup, quota usage high');
       return;
     }
 
-    await chrome.storage.local.set({
+    await browser.storage.local.set({
       gpm_backup_current: {
         type: 'update',
         data: {
@@ -266,8 +271,8 @@ async function createUpdateBackup(previousVersion) {
  */
 async function notifyTabsAboutUpdate() {
   try {
-    const newVersion = chrome.runtime.getManifest().version;
-    await chrome.storage.local.set({
+    const newVersion = browser.runtime.getManifest().version;
+    await browser.storage.local.set({
       gpm_lastExtensionUpdate: {
         version: newVersion,
         timestamp: Date.now(),
@@ -303,7 +308,7 @@ function gpmReleaseWriteLock(tabId) {
   }
 }
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'GPM_ACQUIRE_LOCK') {
     const tabId = sender.tab?.id;
     sendResponse({ granted: gpmAcquireWriteLock(tabId) });

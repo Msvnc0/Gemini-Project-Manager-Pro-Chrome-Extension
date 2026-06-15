@@ -28,7 +28,7 @@ const GPMContextRecovery = (() => {
 
   function checkContext() {
     try {
-      const isValid = !!(chrome.runtime && chrome.runtime.id);
+      const isValid = !!(browser.runtime && browser.runtime.id);
       return isValid;
     } catch (e) {
       return false;
