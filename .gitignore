@@ -3,6 +3,9 @@
 *.xpi
 dist-firefox/
 plans/
+docs/plans/
+docs/specs/
+docs/superpowers/
 
 # OS files
 .DS_Store
