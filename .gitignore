@@ -2,6 +2,9 @@
 *.zip
 *.xpi
 dist-firefox/
+libs/
+gemini-project-manager-pro-v*/
+.claude/
 plans/
 docs/plans/
 docs/specs/
