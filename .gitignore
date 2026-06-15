@@ -2,6 +2,7 @@
 *.zip
 *.xpi
 dist-firefox/
+plans/
 
 # OS files
 .DS_Store
